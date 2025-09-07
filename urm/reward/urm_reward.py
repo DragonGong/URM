@@ -1,5 +1,6 @@
 import numpy as np
 
+
 # 下面代码全部gpt生成
 # ============ Quintic Polynomial ============
 class QuinticPolynomial:
@@ -86,5 +87,15 @@ def URM_reward(ego_state, surrounding_states):
 
     risks = [compute_risk(traj, others_trajs) for traj in candidate_trajs]
     URM_value = np.mean(risks)
-    reward = -URM_value
+    R_safe = -URM_value
+
+    # 速度奖励
+    ego_speed = np.linalg.norm([ego_state[2], ego_state[3]])
+    desired_speed = 30.0  # 目标速度
+    R_speed = 1.0 - abs(ego_speed - desired_speed) / desired_speed
+
+
+
+    # 组合奖励
+    reward = 0.5 * R_safe + 0.5 * R_speed
     return reward
