@@ -26,7 +26,9 @@ if __name__ == "__main__":
                 "target_speed": 10,  # 所有 NPC 车辆的目标速度
                 "maximum_speed": 15,
                 "minimum_speed": 5
-            }
+            },
+            "collision_reward": -1,
+            "lane_change_reward": -0.2,
         })
         env.reset()
         return URMHighwayEnv(env)
