@@ -71,7 +71,7 @@ def URM_reward(ego_state, surrounding_states):
 
     # 变道惩罚
     lateral_velocity = abs(ego_state[3])
-    R_lateral = -0.1 * lateral_velocity
+    R_lateral = -0.3 * lateral_velocity
     # 组合奖励
     reward = 0.5 * R_safe + 0.3 * R_speed + 0.2 * R_lateral
     return reward
