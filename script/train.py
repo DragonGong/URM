@@ -40,6 +40,6 @@ if __name__ == "__main__":
                 n_steps=1024, batch_size=64, n_epochs=10, gamma=0.99, device="cpu")
 
     print("开始训练...")
-    model.learn(total_timesteps=300000)
+    model.learn(total_timesteps=200000)
     model_filename = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "_ppo_urm_highway"
     model.save(os.path.join("./agent", model_filename))
