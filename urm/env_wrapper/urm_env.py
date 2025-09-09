@@ -4,8 +4,9 @@ from urm.reward.urm_reward import URM_reward
 
 # 改了一点，但是大部分gpt
 class URMHighwayEnv(gym.Wrapper):
-    def __init__(self, env):
+    def __init__(self, env,config):
         super().__init__(env)
+        self.config = config
 
     def step(self, action):
         obs, _, terminated, truncated, info = self.env.step(action)
@@ -20,7 +21,7 @@ class URMHighwayEnv(gym.Wrapper):
                 surrounding.append([v.position[0], v.position[1],
                                     v.velocity[0], v.velocity[1]])
 
-        reward = URM_reward(ego, surrounding)
+        reward = URM_reward(ego, surrounding,self.config['reward'])
         return obs, reward, terminated, truncated, info
 
 

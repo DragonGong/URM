@@ -1,45 +1,62 @@
 import datetime
-import os.path
-import time
-import numpy as np
-import highway_env
+import os
+import yaml
 import gymnasium as gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 from urm.env_wrapper.urm_env import URMHighwayEnv
+import highway_env
+
+
+# 读取 YAML 配置
+def load_config(config_path="config/train_config.yaml"):
+    with open(config_path, 'r', encoding='utf-8') as f:
+        return yaml.safe_load(f)
+
+
+def make_env(config):
+    env = gym.make(config['env_config']['env_id'])
+    env_config = config['env_config']
+
+    # 构建 IDMVehicle 配置（嵌套）
+    idm_config = env_config.get('IDMVehicle', {})
+    if idm_config:
+        env_config['highway_env.vehicle.behavior.IDMVehicle'] = idm_config
+
+    env.unwrapped.configure(env_config)
+    env.reset()
+    return URMHighwayEnv(env, config)
+
 
 if __name__ == "__main__":
-    def make_env():
-        env = gym.make("highway-v0")
-        env.unwrapped.configure({
-            "lanes_count": 4,
-            "vehicles_count": 20,
-            "duration": 40,
-            "simulation_frequency": 15,
-            "policy_frequency": 5,
-            "observation": {
-                "type": "Kinematics"
-            },
-            "vehicles_density": 1.2,
-            "vehicles_types": ["highway_env.vehicle.behavior.IDMVehicle"],
-            "highway_env.vehicle.behavior.IDMVehicle": {
-                "target_speed": 10,  # 所有 NPC 车辆的目标速度
-                "maximum_speed": 15,
-                "minimum_speed": 5
-            },
-            "collision_reward": -1,
-            "lane_change_reward": -0.2,
-        })
-        env.reset()
-        return URMHighwayEnv(env)
+    # 加载配置
+    config = load_config()
 
+    # 创建环境
+    env = DummyVecEnv([lambda: make_env(config)])
 
-    env = DummyVecEnv([make_env])
-
-    model = PPO("MlpPolicy", env, verbose=1, learning_rate=3e-4,
-                n_steps=1024, batch_size=64, n_epochs=10, gamma=0.99, device="cpu")
+    # 从配置创建模型
+    model_config = config['model_config']
+    model = PPO(
+        policy=model_config['policy'],
+        env=env,
+        verbose=model_config['verbose'],
+        learning_rate=model_config['learning_rate'],
+        n_steps=model_config['n_steps'],
+        batch_size=model_config['batch_size'],
+        n_epochs=model_config['n_epochs'],
+        gamma=model_config['gamma'],
+        device=model_config['device']
+    )
 
     print("开始训练...")
-    model.learn(total_timesteps=200000)
-    model_filename = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "_ppo_urm_highway"
-    model.save(os.path.join("./agent", model_filename))
+    training_config = config['training']
+    model.learn(total_timesteps=training_config['total_timesteps'])
+
+    # 保存模型
+    model_filename = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + "_ppo_urm_highway"
+    save_path = os.path.join(training_config['save_dir'], model_filename)
+    os.makedirs(training_config['save_dir'], exist_ok=True)  # 确保目录存在
+    model.save(save_path)
+
+    print(f"模型已保存至: {save_path}")
