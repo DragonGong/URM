@@ -56,7 +56,7 @@ def compute_risk(ego_traj, others_trajs, collision_radius=2.0):
         return 0.0
 
 
-def URM_reward(ego_state, surrounding_states, train_config):
+def URM_reward(ego_state, surrounding_states, train_config, baseline_reward=None):
     candidate_trajs = generate_candidate_trajectories(ego_state)
     others_trajs = predict_other_vehicles(surrounding_states)
 
@@ -75,4 +75,7 @@ def URM_reward(ego_state, surrounding_states, train_config):
     # 组合奖励
     reward = train_config['r_safe_w'] * R_safe + train_config['r_speed_w'] * R_speed + train_config[
         'r_lateral_w'] * R_lateral
+    baseline_reward_w = train_config['baseline_reward_w']
+    if baseline_reward is not None:
+        reward = baseline_reward * baseline_reward_w + reward * (1 - baseline_reward_w)
     return reward

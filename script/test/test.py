@@ -44,17 +44,20 @@ if __name__ == "__main__":
     print(f"加载模型: {model_path}")
     print("开始测试...")
 
-    obs = test_env.reset()
-    done = False
     total_reward = 0
+    for episode in range(test_config['test_episodes']):
+        obs = test_env.reset()
+        done = False
+        episode_reward = 0
+        while not done:
+            action, _ = model.predict(obs, deterministic=True)
+            obs, reward, done, info = test_env.step(action)
+            test_env.render()
+            episode_reward += reward[0]
+        print(f"Episode {episode + 1} 总奖励: {episode_reward}")
+        total_reward += episode_reward
 
-    while not done:
-        action, _ = model.predict(obs, deterministic=True)
-        obs, reward, done, info = test_env.step(action)
-        test_env.render()  # 可视化
-        total_reward += reward[0]  # VecEnv 返回的是数组
-
-    print("✅ 测试完成！")
-    print("📊 测试总奖励:", total_reward)
+    avg_reward = total_reward / test_config['test_episodes']
+    print(f"📈 平均奖励: {avg_reward}")
 
     test_env.close()

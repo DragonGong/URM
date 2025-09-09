@@ -9,7 +9,7 @@ class URMHighwayEnv(gym.Wrapper):
         self.config = config
 
     def step(self, action):
-        obs, _, terminated, truncated, info = self.env.step(action)
+        obs, baseline_reward , terminated, truncated, info = self.env.step(action)
 
         env = self.env.unwrapped
         ego = [env.vehicle.position[0], env.vehicle.position[1],
@@ -21,7 +21,7 @@ class URMHighwayEnv(gym.Wrapper):
                 surrounding.append([v.position[0], v.position[1],
                                     v.velocity[0], v.velocity[1]])
 
-        reward = URM_reward(ego, surrounding,self.config['reward'])
+        reward = URM_reward(ego, surrounding,self.config['reward'],baseline_reward)
         return obs, reward, terminated, truncated, info
 
 
