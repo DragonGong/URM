@@ -56,7 +56,7 @@ def compute_risk(ego_traj, others_trajs, collision_radius=2.0):
         return 0.0
 
 
-def URM_reward(ego_state, surrounding_states):
+def URM_reward(ego_state, surrounding_states, train_config, baseline_reward=None):
     candidate_trajs = generate_candidate_trajectories(ego_state)
     others_trajs = predict_other_vehicles(surrounding_states)
 
@@ -66,9 +66,16 @@ def URM_reward(ego_state, surrounding_states):
 
     # 速度奖励
     ego_speed = np.linalg.norm([ego_state[2], ego_state[3]])
-    desired_speed = 20.0  # 目标速度
+    desired_speed = train_config['desired_speed']  # 目标速度
     R_speed = 1.0 - abs(ego_speed - desired_speed) / desired_speed
 
+    # 变道惩罚
+    lateral_velocity = abs(ego_state[3])
+    R_lateral = -train_config['v2r_w'] * lateral_velocity
     # 组合奖励
-    reward = 0.5 * R_safe + 0.5 * R_speed
+    reward = train_config['r_safe_w'] * R_safe + train_config['r_speed_w'] * R_speed + train_config[
+        'r_lateral_w'] * R_lateral
+    baseline_reward_w = train_config['baseline_reward_w']
+    if baseline_reward is not None:
+        reward = baseline_reward * baseline_reward_w + reward * (1 - baseline_reward_w)
     return reward
