@@ -35,6 +35,7 @@ class Config:
             self.offscreen_rendering = kwargs.get("offscreen_rendering", False)
 
     class ModelConfig:
+        # 强化学习模型
         def __init__(self, **kwargs):
             self.algorithm = kwargs.get("algorithm", "DQN")
             self.policy = kwargs.get("policy", "MlpPolicy")
@@ -52,6 +53,11 @@ class Config:
 
     class RewardConfig:
         def __init__(self, **kwargs):
+            # 轨迹树建立参数
+            self.step_num = kwargs.get("step_num", 3)
+            self.duration = kwargs.get("duration", 1)  # 单位是秒
+
+            # old 参数
             self.desired_speed = kwargs.get("desired_speed", 20)
             self.r_safe_w = kwargs.get("r_safe_w", 0.7)
             self.r_speed_w = kwargs.get("r_speed_w", 0.2)
@@ -65,6 +71,9 @@ class Config:
             self.discount_factor_min = kwargs.get("discount_factor_min", 0.2)
 
             self.risk_max_for_tree = kwargs.get("risk_max_for_tree", 1)  # 如果碰撞直接设的值
+
+            # 预测模型：
+            self.prediction_model = kwargs.get("prediction_model", "linear_model")
 
     class TrainingConfig:
         def __init__(self, **kwargs):

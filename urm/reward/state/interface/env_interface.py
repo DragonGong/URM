@@ -1,8 +1,9 @@
-from typing import Protocol, Any, Tuple, Union
+from typing import Protocol, Any, Tuple, Union, runtime_checkable
 from urm.reward.state.utils.position import Position
 import numpy as np
 
 
+@runtime_checkable
 class EnvInterface(Protocol):
     def _extract_xy(self, pos: Any) -> Tuple[float, float]:
         ...

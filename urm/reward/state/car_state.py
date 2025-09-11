@@ -2,6 +2,7 @@ from copy import deepcopy
 
 from urm.reward.state.state import State
 from urm.reward.state.utils.position import Position
+from urm.reward.state.utils.vehicle_size import VehicleSize
 from urm.reward.state.utils.velocity import Velocity
 
 
@@ -12,7 +13,13 @@ class CarState(State):
         self._position = Position(x, y)
         self._velocity = Velocity(vx, vy)
 
+        self._vehicle_size = VehicleSize()
+
     # ========== 保持外部接口不变 ==========
+
+    @property
+    def vehicle_size(self):
+        return self._vehicle_size
 
     @property
     def velocity(self):

@@ -1,9 +1,10 @@
 from copy import deepcopy
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from urm.config import Config
 from urm.reward.state.car_state import CarState
 from urm.reward.state.ego_state import EgoState
+from urm.reward.state.region2d import Region2D
 from urm.reward.state.state import State
 from urm.reward.state.surrounding_state import SurroundingState
 from urm.reward.state.utils.position import Position
@@ -25,6 +26,23 @@ class TrajectoryGenerator:
         self.ego_state = ego_state
         self.behaviors = behaviors
         self.prediction_model = prediction_model
+        self.prediction_result: [[Region2D]] = None
+
+    def predict_collision_region(self):
+        """
+        Generate the temporal and spatial regions of conflicts among surrounding vehicles
+        :return:
+        """
+        step_num = self.config.reward.step_num
+        duration = self.config.reward.duration
+
+        for time in range(step_num):
+            result = []
+            for car in self.surrounding_states:
+                region = self.prediction_model.predict_region(car, (time + 1) * duration, width=car.vehicle_size.width,
+                                                              length=car.vehicle_size.length)
+                result.append(region)
+            self.prediction_result.append(result)
 
     def generate_right(self, step_nums=3, duration=1):
         root_node = TrajNode.from_car_state(self.ego_state)
@@ -112,7 +130,10 @@ class TrajectoryGenerator:
                 position_list = edge.sample()
                 collision = False
                 for pos in position_list:
-                    if self.judge_surrounding_collision(pos):
+                    sample_node = TrajNode.from_position(pos)
+                    # todo:目前只能使用这个边的开始节点的时间步来当作这个边的时间步
+                    sample_node.set_timestep(edge.node_begin.get_time())
+                    if self.judge_surrounding_collision(sample_node):
                         collision = True
                         break
                 if collision:
@@ -147,6 +168,12 @@ class TrajectoryGenerator:
     def judge_conventional_collision(self, position: Position):
         return self.env_condition.judge_match_road(position)
 
-    # 这个函数需要在多个环节调用，为了效率只预测一遍
-    def judge_surrounding_collision(self, position: Position):
-        return
+    def judge_surrounding_collision(self, node: TrajNode):
+        # 这个函数需要在多个环节调用，为了效率只预测一遍
+        # 与时间有关，所以是 节点 为输入（节点输入包含时间）
+        assert self.prediction_result is not None, "prediction result is None!"
+        regions: [Region2D] = self.prediction_result[node.get_time() - 1]
+        for region in regions:
+            if region.contains(node.x, node.y):
+                return True
+        return False

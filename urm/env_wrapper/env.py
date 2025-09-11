@@ -5,11 +5,13 @@ import numpy as np
 
 from urm.reward.state.utils.position import Position
 from urm.reward.state.interface.env_interface import EnvInterface
+import highway_env
 
 
 class Env(gym.Wrapper):
     def __init__(self, env):
         super().__init__(env)
+
 
     def _extract_xy(self, pos: Any) -> Tuple[float, float]:
         """
@@ -64,3 +66,8 @@ class Env(gym.Wrapper):
             return True  # 在安全区域内
 
         return False  # 不在任何车道内 → 离开道路
+
+
+if __name__ == "__main__":
+    env = Env(gym.make("highway-fast-v0"))
+    print(isinstance(env, EnvInterface))  # → True ✅
