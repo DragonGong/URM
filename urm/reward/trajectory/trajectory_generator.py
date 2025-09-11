@@ -1,0 +1,152 @@
+from copy import deepcopy
+from typing import List, Optional
+
+from urm.config import Config
+from urm.reward.state.car_state import CarState
+from urm.reward.state.ego_state import EgoState
+from urm.reward.state.state import State
+from urm.reward.state.surrounding_state import SurroundingState
+from urm.reward.state.utils.position import Position
+from urm.reward.trajectory.behaviors import Behavior
+from urm.reward.trajectory.highway_env_state import HighwayState
+from urm.reward.trajectory.prediction.model import Model
+from urm.reward.trajectory.risk import Risk
+from urm.reward.trajectory.traj import TrajNode, TrajEdge, Traj
+from urm.reward.trajectory.traj_tree import TrajTree
+
+
+class TrajectoryGenerator:
+    def __init__(self, ego_state: EgoState, surrounding_states: SurroundingState, env_condition: State,
+                 behaviors: List[Behavior],
+                 prediction_model: Model, config: Config = None):
+        self.env_condition = env_condition.env_condition
+        self.config: Optional[Config] = config
+        self.surrounding_states = surrounding_states
+        self.ego_state = ego_state
+        self.behaviors = behaviors
+        self.prediction_model = prediction_model
+
+    def generate_right(self, step_nums=3, duration=1):
+        root_node = TrajNode.from_car_state(self.ego_state)
+        traj_tree = self.traj_tree_generated_by_behaviors(root_node, self.ego_state, self.behaviors, step_nums,
+                                                          duration)
+        traj_tree = self.traj_tree_cut(traj_tree)
+        return traj_tree
+
+    def traj_tree_generated_by_behaviors(self, root_node: TrajNode, ego_state: CarState, behaviors: List[Behavior],
+                                         step_nums,
+                                         duration: int, time_step=0) -> TrajTree:
+        if time_step == step_nums:
+            return TrajTree.from_node(root_node)
+        tree_list = []
+        for b in behaviors:
+            car_state = b.target_state(ego_state.position, HighwayState.from_carstate(ego_state, duration))
+            # 建节点的时候，就会把速度引进去
+            node = TrajNode.from_car_state(car_state)
+            node.set_timestep(time_step + 1)
+            tree_list.append(
+                self.traj_tree_generated_by_behaviors(node, car_state, behaviors, step_nums, duration, time_step + 1))
+        tree = TrajTree.from_node(root_node)
+        for child_tree in tree_list:
+            edge = TrajEdge(root_node, child_tree.root)
+            tree.add_child(edge, child_tree)
+        return tree
+
+    def traj_tree_cut(self, traj_tree: TrajTree) -> TrajTree:
+        """
+        对轨迹树进行碰撞剪枝：
+        - 遍历每条边，采样点调用 judge_collision
+        - 若任意采样点碰撞 → 删除该边及子树
+        - 否则保留
+        - 返回剪枝后的新树（不修改原树）
+        """
+
+        def _prune_tree(tree: TrajTree) -> Optional[TrajTree]:
+            # 创建当前节点的副本（深拷贝根节点）
+            new_root = deepcopy(tree.root)
+
+            # 存储安全的子边和子树（绑定在一起）
+            safe_children = []
+
+            # ✅ 直接遍历绑定的 (edge, child_tree) 元组，语义清晰，绝对安全
+            for edge, child_tree in tree.iter_children():
+                # 采样边上的点（默认10个点）
+                sampled_points = edge.sample(num_points=10)
+
+                # 检查所有采样点是否碰撞
+                collision_detected = any(
+                    self.judge_conventional_collision(point)
+                    for point in sampled_points
+                )
+
+                if not collision_detected:
+                    # 安全：递归剪枝子树
+                    pruned_child = _prune_tree(child_tree)
+                    if pruned_child is not None:  # 子树可能被完全剪掉
+                        # 深拷贝边（避免修改原边）
+                        new_edge = deepcopy(edge)
+                        new_edge.node_begin = new_root  # 修正起点为新根
+                        # ✅ 直接添加绑定元组
+                        safe_children.append((new_edge, pruned_child))
+
+            # 如果没有任何子树保留，返回叶子节点
+            if len(safe_children) == 0:
+                return TrajTree.from_node(new_root)
+            else:
+                # ✅ 使用新的构造方式（只传 children 列表）
+                return TrajTree(root=new_root, children=safe_children)
+
+        # 开始剪枝
+        pruned_tree = _prune_tree(traj_tree)
+        if pruned_tree is None:
+            return TrajTree.from_node(deepcopy(traj_tree.root))
+        return pruned_tree
+
+    def set_risk_backpropagation(self, tree: TrajTree):
+        root = tree.root
+        if self.judge_surrounding_collision(root):
+            self.set_tree_risk(tree, self.config.reward.risk_max_for_tree)
+            return
+        else:
+            for edge in tree.children_edges:
+                position_list = edge.sample()
+                collision = False
+                for pos in position_list:
+                    if self.judge_surrounding_collision(pos):
+                        collision = True
+                        break
+                if collision:
+                    self.set_tree_risk(tree.get_subtree_by_edge(edge), self.config.reward.risk_max_for_tree)
+                else:
+                    self.set_risk_backpropagation(tree.get_subtree_by_edge(edge))
+
+            child_tree_num = 0.0
+            child_tree_risk_total = 0.0
+            for _, child_tree in tree.iter_children():
+                all_nodes = child_tree.get_all_nodes()
+                risk_all = 0.0
+                for n in all_nodes:
+                    risk_all += n.risk.get_value(n.get_time())
+                child_tree_risk_total += risk_all / len(all_nodes)
+                child_tree_num += 1
+            if child_tree_num == 0.0:
+                root.set_risk_value(0, root.velocity.magnitude)
+            risk_value = Risk.calculate_last_risk_value(
+                child_tree_risk_total / child_tree_num, root.velocity.magnitude, self.config.reward.velocity_unit
+                , self.config.reward.discount_factor_max, self.config.reward.discount_factor_min)
+            root.set_risk_value(risk_value, root.velocity.magnitude)
+        return
+
+    def set_tree_risk(self, tree: TrajTree, value):
+        if tree is None:
+            return
+        tree.root.set_risk_value(value, tree.root.velocity.magnitude)
+        for child_tree in tree.children_trees:
+            self.set_tree_risk(child_tree, value)
+
+    def judge_conventional_collision(self, position: Position):
+        return self.env_condition.judge_match_road(position)
+
+    # 这个函数需要在多个环节调用，为了效率只预测一遍
+    def judge_surrounding_collision(self, position: Position):
+        return

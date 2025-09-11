@@ -1,5 +1,8 @@
+from urm.reward.state.car_state import CarState
 from urm.reward.state.utils.position import Position
 from typing import List, Optional, Callable, Iterator
+
+from urm.reward.state.utils.velocity import Velocity
 from urm.reward.trajectory.risk import Risk
 
 
@@ -7,10 +10,32 @@ class TrajNode(Position):
     def __init__(self, x: float, y: float, **kwargs):
         super().__init__(x, y)
         self.risk: Optional[Risk] = kwargs.get('risk', None)
+        self._time: int = 0  # 建树的时候就会赋值
+        self.velocity: Optional[Velocity] = kwargs.get('velocity', None)
+
+    def get_time(self) -> int:
+        return self._time
+
+    def set_velocity(self, velocity: Velocity):
+        self.velocity = velocity
+
+    @classmethod
+    def from_car_state(cls, state: CarState):
+        """
+        车的状态中的速度和轨迹点的是不一样的地址
+        :param state:
+        :return:
+        """
+        node = cls.from_position(state.position)
+        node.set_velocity(state.velocity)
+        return node
 
     @classmethod
     def from_position(cls, position: Position) -> 'TrajNode':
         return cls(position.x, position.y)
+
+    def set_timestep(self, timestep: int):
+        self._time = timestep
 
     def judge_risk_initial_nature(self) -> bool:
         if self.risk is not None:
@@ -18,10 +43,13 @@ class TrajNode(Position):
         else:
             return True
 
-    def set_risk_value(self, value):
+    def set_risk_value(self, risk: float, speed: float, t: float = -1):
         if self.risk is None:
             self.risk = Risk()
-        self.risk.set_value(value)
+        if t == -1:
+            self.risk.set_value(self._time, risk, speed)
+        else:
+            self.risk.set_value(t, risk, speed)
 
     def __repr__(self) -> str:
         return f"TrajNode({self.x:.3f}, {self.y:.3f})"
@@ -66,8 +94,8 @@ class TrajEdge:
         return f"TrajEdge({self.node_begin} → {self.node_end}, algo={algo_name})"
 
 
-# 单个轨迹
 class Traj:
+    # 单个轨迹
     def __init__(
             self,
             nodes: List[TrajNode],

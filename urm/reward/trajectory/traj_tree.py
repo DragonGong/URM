@@ -1,28 +1,22 @@
-from typing import List, Optional, Iterator
 from matplotlib.patches import FancyArrowPatch
-
 from urm.reward.state.utils.position import Position
 from urm.reward.trajectory.traj import TrajNode, TrajEdge
+from typing import List, Tuple, Optional, Iterator
+from dataclasses import dataclass
 
 
 class TrajTree:
     def __init__(
             self,
             root: TrajNode,
-            children_edges: Optional[List['TrajEdge']] = None,
-            children_trees: Optional[List['TrajTree']] = None
+            children: Optional[List[Tuple['TrajEdge', 'TrajTree']]] = None
     ):
         """
         轨迹树节点：包含一个根节点，以及通过边连接的子树列表。
         每条边 TrajEdge 从当前 root 指向子树的 root。
         """
         self.root = root
-        self.children_edges = children_edges or []
-        self.children_trees = children_trees or []
-
-        # 确保边和子树数量一致
-        if len(self.children_edges) != len(self.children_trees):
-            raise ValueError("children_edges 和 children_trees 长度必须一致")
+        self._children = children or []  # 类型: List[(edge, subtree)]
 
     @classmethod
     def from_node(cls, node: TrajNode) -> 'TrajTree':
@@ -33,73 +27,86 @@ class TrajTree:
         """添加一个子树，通过指定的边连接"""
         if edge.node_begin != self.root:
             raise ValueError("边的起点必须是当前树的根节点")
-        self.children_edges.append(edge)
-        self.children_trees.append(subtree)
+        self._children.append((edge, subtree))
+
+    @property
+    def children_edges(self) -> List[TrajEdge]:
+        """获取所有子边（只读视图）"""
+        return [edge for edge, _ in self._children]
+
+    @property
+    def children_trees(self) -> List['TrajTree']:
+        """获取所有子树（只读视图）"""
+        return [subtree for _, subtree in self._children]
+
+    def get_subtree_by_edge(self, edge: 'TrajEdge') -> 'TrajTree':
+        """
+        通过边查找对应的子树（语义匹配起点终点）
+        """
+        for e, subtree in self._children:
+            if (e.node_begin == edge.node_begin and
+                    e.node_end == edge.node_end):
+                return subtree
+        raise ValueError(f"边 {edge} 不是当前树 {self.root} 的直接子边")
 
     @property
     def is_leaf(self) -> bool:
-        """是否为叶子节点（无子树）"""
-        return len(self.children_trees) == 0
+        return len(self._children) == 0
 
     @property
     def total_edges(self) -> int:
-        """递归计算树中所有边的数量"""
-        count = len(self.children_edges)
-        for child in self.children_trees:
+        count = len(self._children)
+        for _, child in self._children:
             count += child.total_edges
         return count
 
     @property
     def total_nodes(self) -> int:
-        """递归计算树中所有节点的数量"""
-        count = 1  # 当前根节点
-        for child in self.children_trees:
+        count = 1
+        for _, child in self._children:
             count += child.total_nodes
         return count
 
     def dfs_iter(self) -> Iterator['TrajTree']:
-        """深度优先遍历所有子树（包括自身）"""
         yield self
-        for child_tree in self.children_trees:
-            yield from child_tree.dfs_iter()
+        for _, child in self._children:
+            yield from child.dfs_iter()
 
     def sample_all_edges(self, num_points: int = 10) -> List[Position]:
-        """
-        对树中所有边进行采样，返回所有采样点（不包括节点，仅边上的插值点）
-        """
         points = []
-        for edge in self.children_edges:
-            edge_points = edge.sample(num_points)
-            # 可选：去掉起点（因为是root，可能重复），保留中间点和终点
-            # points.extend(edge_points[1:])  # 去掉起点
-            points.extend(edge_points)  # 保留所有点
-        for child in self.children_trees:
+        for edge, _ in self._children:
+            points.extend(edge.sample(num_points))
+        for _, child in self._children:
             points.extend(child.sample_all_edges(num_points))
         return points
 
     def get_all_nodes(self) -> List[TrajNode]:
-        """递归获取所有节点"""
         nodes = [self.root]
-        for child in self.children_trees:
+        for _, child in self._children:
             nodes.extend(child.get_all_nodes())
         return nodes
 
     def get_all_edges(self) -> List[TrajEdge]:
-        """递归获取所有边"""
-        edges = self.children_edges[:]
-        for child in self.children_trees:
+        edges = [edge for edge, _ in self._children]
+        for _, child in self._children:
             edges.extend(child.get_all_edges())
         return edges
 
     def total_length(self) -> float:
-        """递归计算树中所有边的直线距离总和"""
-        length = sum(edge.length for edge in self.children_edges)
-        for child in self.children_trees:
+        length = sum(edge.length for edge, _ in self._children)
+        for _, child in self._children:
             length += child.total_length()
         return length
 
+    def iter_children(self) -> Iterator[Tuple['TrajEdge', 'TrajTree']]:
+        """
+        迭代器：安全遍历所有子边和对应子树的绑定对。
+        推荐用于遍历子结构，避免直接访问内部 _children。
+        """
+        yield from self._children
+
     def __repr__(self) -> str:
-        child_reprs = ", ".join([f"→{child.root}" for child in self.children_trees])
+        child_reprs = ", ".join([f"→{subtree.root}" for _, subtree in self._children])
         return f"TrajTree({self.root}, children=[{child_reprs}])"
 
     def visualize(self, indent: int = 0) -> str:
@@ -107,8 +114,7 @@ class TrajTree:
         lines = []
         indent_str = "  " * indent
         lines.append(f"{indent_str}└─ {self.root}")
-        for i, child in enumerate(self.children_trees):
-            edge = self.children_edges[i]
+        for edge, child in self._children:  # ✅ 安全遍历绑定关系
             algo_name = edge.fitting_algorithm.__name__ if edge.fitting_algorithm else "linear"
             lines.append(f"{indent_str}  ├─ Edge({algo_name}) →")
             lines.append(child.visualize(indent + 2))
@@ -132,23 +138,7 @@ class TrajTree:
             dpi=100
     ):
         """
-        使用 matplotlib 可视化整棵轨迹树
-
-        参数:
-            ax: matplotlib axis，若为 None 则新建
-            show_nodes: 是否显示节点
-            show_edges: 是否显示边
-            show_sample_points: 是否显示边上的采样点
-            sample_points_num: 每条边采样点数
-            node_color: 节点颜色
-            edge_color: 边颜色
-            sample_point_color: 采样点颜色
-            node_size: 节点大小
-            title: 图标题
-            show_grid: 是否显示网格
-            show_legend: 是否显示图例
-            show_direction: 是否用箭头显示边方向
-            dpi: 图像分辨率
+        使用 matplotlib 可视化整棵轨迹树（已适配新结构，安全可靠）
         """
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 8), dpi=dpi)
@@ -156,8 +146,8 @@ class TrajTree:
         else:
             created_fig = False
 
-        all_nodes = self.get_all_nodes()
-        all_edges = self.get_all_edges()
+        all_nodes = self.get_all_nodes()  # ✅ 已重构，安全
+        all_edges = self.get_all_edges()  # ✅ 已重构，安全
 
         # 绘制节点
         if show_nodes:
@@ -165,7 +155,6 @@ class TrajTree:
             y_nodes = [node.y for node in all_nodes]
             ax.scatter(x_nodes, y_nodes, color=node_color, s=node_size, zorder=5,
                        label='TrajNode' if show_legend else "")
-            # 可选：标注节点序号
             for i, node in enumerate(all_nodes):
                 ax.text(node.x + 0.02, node.y + 0.02, str(i + 1), fontsize=9, color='darkred')
 
@@ -177,7 +166,6 @@ class TrajTree:
                 y_vals = [p.y for p in sampled]
 
                 if show_direction and len(x_vals) > 1:
-                    # 画带箭头的线（从起点到终点方向）
                     for i in range(len(x_vals) - 1):
                         arrow = FancyArrowPatch(
                             (x_vals[i], y_vals[i]),
@@ -190,14 +178,10 @@ class TrajTree:
                             zorder=3
                         )
                         ax.add_patch(arrow)
-                    # 也可以只画一个从起点指向终点的大箭头（更简洁）：
-                    # ax.annotate('', xy=(x_vals[-1], y_vals[-1]), xytext=(x_vals[0], y_vals[0]),
-                    #             arrowprops=dict(arrowstyle='->', color=edge_color, lw=2))
                 else:
                     ax.plot(x_vals, y_vals, color=edge_color, linewidth=2, zorder=3,
                             label='TrajEdge' if show_legend and edge == all_edges[0] else "")
 
-                # 绘制采样点（可选）
                 if show_sample_points:
                     ax.scatter(x_vals[1:-1], y_vals[1:-1], color=sample_point_color, s=15, zorder=4,
                                label='Sample Point' if show_legend and edge == all_edges[0] else "")
@@ -222,6 +206,7 @@ class TrajTree:
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import matplotlib
+
     matplotlib.use('TkAgg')  # 在导入 pyplot 前设置后端
     # 创建节点
     n1 = TrajNode(0, 0)

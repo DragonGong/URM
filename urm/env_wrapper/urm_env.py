@@ -1,15 +1,18 @@
 import gymnasium as gym
+
+from urm.config import Config
 from urm.reward.urm_reward import URM_reward
+from urm.env_wrapper.env import Env
 
 
 # 改了一点，但是大部分gpt
-class URMHighwayEnv(gym.Wrapper):
-    def __init__(self, env,config):
+class URMHighwayEnv(Env):
+    def __init__(self, env, config: dict):
         super().__init__(env)
         self.config = config
 
     def step(self, action):
-        obs, baseline_reward , terminated, truncated, info = self.env.step(action)
+        obs, baseline_reward, terminated, truncated, info = self.env.step(action)
 
         env = self.env.unwrapped
         ego = [env.vehicle.position[0], env.vehicle.position[1],
@@ -21,7 +24,5 @@ class URMHighwayEnv(gym.Wrapper):
                 surrounding.append([v.position[0], v.position[1],
                                     v.velocity[0], v.velocity[1]])
 
-        reward = URM_reward(ego, surrounding,self.config['reward'],baseline_reward)
+        reward = URM_reward(ego, surrounding, self.config['reward'], baseline_reward)
         return obs, reward, terminated, truncated, info
-
-
