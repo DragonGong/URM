@@ -9,3 +9,4 @@ class RewardMeta(ABC):
 
     @abstractmethod
     def reward(self):
+        ...

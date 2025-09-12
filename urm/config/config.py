@@ -69,6 +69,10 @@ class Config:
             def __init__(self, **kwargs):
                 self.linear_model_config = self.LinearModelConfig(**kwargs.get("linear_model_config", {}))
 
+        class BehaviorConfigs:
+            def __init__(self, **kwargs):
+                pass
+
         def __init__(self, **kwargs):
             # 轨迹树建立参数
             self.step_num = kwargs.get("step_num", 3)
@@ -97,6 +101,9 @@ class Config:
             # 拟合模型：
             self.fitting_model = kwargs.get("fitting_model", "frenet")
             self.fitting_model_configs = self.FittingModelConfigs(**kwargs.get("fitting_model_config", {}))
+
+            # 行为列表
+            self.behavior_configs = self.BehaviorConfigs(**kwargs.get("behavior_configs", {}))
 
     class TrainingConfig:
         def __init__(self, **kwargs):
