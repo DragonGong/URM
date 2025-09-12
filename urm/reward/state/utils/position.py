@@ -1,5 +1,7 @@
 from typing import Tuple
 
+import numpy as np
+
 
 class Position:
     def __init__(self, x: float = 0.0, y: float = 0.0):
@@ -45,3 +47,7 @@ class Position:
     def from_tuple(cls, pos: Tuple[float, float]) -> 'Position':
         """从 (x, y) 元组构造 Position"""
         return cls(x=pos[0], y=pos[1])
+
+    @classmethod
+    def from_nparray(cls, np_arr: np.array) -> 'Position':
+        return cls(x=np_arr[0], y=np_arr[1])

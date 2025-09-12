@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from urm.config import Config
 from urm.reward.state.car_state import CarState
@@ -8,11 +8,11 @@ from urm.reward.state.region2d import Region2D
 from urm.reward.state.state import State
 from urm.reward.state.surrounding_state import SurroundingState
 from urm.reward.state.utils.position import Position
-from urm.reward.trajectory.behaviors import Behavior
+from urm.reward.trajectory.behavior.behaviors import Behavior
 from urm.reward.trajectory.highway_env_state import HighwayState
 from urm.reward.trajectory.prediction.model import Model
 from urm.reward.trajectory.risk import Risk
-from urm.reward.trajectory.traj import TrajNode, TrajEdge, Traj
+from urm.reward.trajectory.traj import TrajNode, TrajEdge
 from urm.reward.trajectory.traj_tree import TrajTree
 
 
@@ -27,6 +27,7 @@ class TrajectoryGenerator:
         self.behaviors = behaviors
         self.prediction_model = prediction_model
         self.prediction_result: [[Region2D]] = None
+        self.predict_collision_region()
 
     def predict_collision_region(self):
         """

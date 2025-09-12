@@ -4,56 +4,9 @@ from urm.reward.state.car_state import CarState
 from urm.reward.state.utils.position import Position
 from urm.reward.trajectory.highway_env_state import HighwayState as State
 
-
-class Behavior(ABC):
-
-    @abstractmethod
-    def target_state(self, initial_position: Position, state: State) -> CarState:
-        pass
-        # =============================
+from .behaviors import Behavior
 
 
-# Lateral Behaviors
-# =============================
-class LateralBehavior(Behavior):
-    """Base class for lateral behaviors."""
-
-    @abstractmethod
-    def target_state(self, initial_position: Position, state: State) -> CarState:
-        pass
-
-    @abstractmethod
-    def target_offset(self, root_offset: float, state: State) -> float:
-        pass
-
-
-class LateralKeep(LateralBehavior):
-    def target_state(self, initial_position: Position, state: State) -> CarState:
-        pass
-
-    def target_offset(self, root_offset: float, state: State) -> float:
-        return root_offset
-
-
-class LateralLeft(LateralBehavior):
-    def target_state(self, initial_position: Position, state: State) -> CarState:
-        pass
-
-    def target_offset(self, root_offset: float, state: State) -> float:
-        return root_offset - (0.3 if state.velocity < 5 else 0.5)
-
-
-class LateralRight(LateralBehavior):
-    def target_state(self, initial_position: Position, state: State) -> CarState:
-        pass
-
-    def target_offset(self, root_offset: float, state: State) -> float:
-        return root_offset + (0.3 if state.velocity < 5 else 0.5)
-
-
-# =============================
-# Longitudinal Behaviors
-# =============================
 class LongitudinalBehavior(Behavior):
     """Base class for longitudinal behaviors."""
 
@@ -68,7 +21,23 @@ class LongitudinalBehavior(Behavior):
 
 class LongitudinalCruise(LongitudinalBehavior):
     def target_state(self, initial_position: Position, state: State) -> CarState:
-        pass
+        v = state.velocity
+        vx, vy = v.vx, v.vy
+        duration = state.duration
+
+        dx = vx * duration
+        dy = vy * duration
+
+        new_x = initial_position.x + dx
+        new_y = initial_position.y + dy
+
+        target_car_state = CarState(
+            x=new_x,
+            y=new_y,
+            vx=vx,
+            vy=vy
+        )
+        return target_car_state
 
     def target_velocity(self, root_velocity: float, state: State) -> float:
         return state.velocity

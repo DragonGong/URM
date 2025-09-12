@@ -6,12 +6,12 @@ Supports integration with gymnasium environments.
 from enum import Enum
 from typing import List, Optional, Tuple
 from urm.reward.trajectory.highway_env_state import HighwayState as State
-from urm.reward.trajectory.behaviors import LateralKeep, LateralLeft, LateralRight, LongitudinalCruise, \
+from urm.reward.trajectory.behavior.behaviors import LateralKeep, LateralLeft, LateralRight, LongitudinalCruise, \
     SoftAcceleration, HardAcceleration, SoftDeceleration, HardDeceleration
 
 
 # =============================
-# Behavior Tree Nodes
+# Behavior Tree Nodes  by lqy
 # =============================
 class BehaviorNode:
     """Tree node storing a (lateral, longitudinal) behavior."""

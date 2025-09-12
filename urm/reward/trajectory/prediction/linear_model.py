@@ -1,14 +1,16 @@
 from urm.config import Config
 from urm.reward.trajectory.prediction.model import Model
 
-from urm.reward.trajectory.prediction.model import Model
+from urm.reward.trajectory.prediction.model import Model, ModelName
 from urm.reward.state.utils.position import Position
 import numpy as np
 from urm.reward.state.region2d import RectRegion, CircleRegion, Region2D
+from .model_factory import register_model
 
 
+@register_model(ModelName.LINEAR_MODEL)
 class LinearModel(Model):
-    def __init__(self, config: Config, **kwargs):
+    def __init__(self, config: Config.RewardConfig.PredictionModelConfigs, **kwargs):
         super().__init__(config, **kwargs)
 
     def predict_position(self, car_state, time: float) -> Position:

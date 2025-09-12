@@ -52,6 +52,15 @@ class Config:
             self.tensorboard_log = kwargs.get("tensorboard_log", "highway_dqn/")
 
     class RewardConfig:
+
+        class PredictionModelConfigs:
+            class LinearModelConfig:
+                def __init__(self, **kwargs):
+                    pass
+
+            def __init__(self, **kwargs):
+                self.linear_model_config = self.LinearModelConfig(**kwargs.get("linear_model_config", {}))
+
         def __init__(self, **kwargs):
             # 轨迹树建立参数
             self.step_num = kwargs.get("step_num", 3)
@@ -74,6 +83,8 @@ class Config:
 
             # 预测模型：
             self.prediction_model = kwargs.get("prediction_model", "linear_model")
+
+            self.prediction_model_configs = self.PredictionModelConfigs(**kwargs.get("prediction_model_configs", {}))
 
     class TrainingConfig:
         def __init__(self, **kwargs):
