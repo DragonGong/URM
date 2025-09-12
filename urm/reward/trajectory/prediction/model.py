@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 from urm.config import Config
 from urm.reward.state.region2d import Region2D, CircleRegion
@@ -6,7 +7,7 @@ from urm.reward.state.utils.position import Position
 
 
 class Model(ABC):
-    def __init__(self, config: Config, **kwargs):
+    def __init__(self, config: Config.RewardConfig.PredictionModelConfigs, **kwargs):
         self.config = config
 
     @abstractmethod
@@ -38,3 +39,8 @@ class Model(ABC):
         考虑不确定性，预测车辆在 time 秒后可能占据的圆形区域
         """
         ...
+
+
+@dataclass
+class ModelName:
+    LINEAR_MODEL = "linear_model"
