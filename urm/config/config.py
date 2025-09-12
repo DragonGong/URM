@@ -53,6 +53,14 @@ class Config:
 
     class RewardConfig:
 
+        class FittingModelConfigs:
+            class Polynomial:
+                def __init__(self, **kwargs):
+                    pass
+
+            def __init__(self, **kwargs):
+                self.polynomial_config = self.Polynomial(**kwargs.get("polynomial"))
+
         class PredictionModelConfigs:
             class LinearModelConfig:
                 def __init__(self, **kwargs):
@@ -85,6 +93,10 @@ class Config:
             self.prediction_model = kwargs.get("prediction_model", "linear_model")
 
             self.prediction_model_configs = self.PredictionModelConfigs(**kwargs.get("prediction_model_configs", {}))
+
+            # 拟合模型：
+            self.fitting_model = kwargs.get("fitting_model", "frenet")
+            self.fitting_model_configs = self.FittingModelConfigs(**kwargs.get("fitting_model_config", {}))
 
     class TrainingConfig:
         def __init__(self, **kwargs):

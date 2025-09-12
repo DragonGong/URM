@@ -10,10 +10,10 @@ class TrajNode(Position):
     def __init__(self, x: float, y: float, **kwargs):
         super().__init__(x, y)
         self.risk: Optional[Risk] = kwargs.get('risk', None)
-        self._time: int = 0  # 建树的时候就会赋值
+        self._time: float = 0  # 建树的时候就会赋值
         self.velocity: Optional[Velocity] = kwargs.get('velocity', None)
 
-    def get_time(self) -> int:
+    def get_time(self) -> float:
         return self._time
 
     def set_velocity(self, velocity: Velocity):
@@ -34,7 +34,7 @@ class TrajNode(Position):
     def from_position(cls, position: Position) -> 'TrajNode':
         return cls(position.x, position.y)
 
-    def set_timestep(self, timestep: int):
+    def set_timestep(self, timestep: float):
         self._time = timestep
 
     def judge_risk_initial_nature(self) -> bool:
@@ -43,9 +43,11 @@ class TrajNode(Position):
         else:
             return True
 
-    def set_risk_value(self, risk: float, speed: float, t: float = -1):
+    def set_risk_value(self, risk: float, speed: Optional[float] = None, t: float = -1):
         if self.risk is None:
             self.risk = Risk()
+        if speed is None:
+            speed = self.velocity.magnitude
         if t == -1:
             self.risk.set_value(self._time, risk, speed)
         else:
@@ -60,11 +62,18 @@ class TrajEdge:
             self,
             node_begin: TrajNode,
             node_end: TrajNode,
-            fitting_algorithm: Optional[Callable[['TrajEdge'], List[Position]]] = None
     ):
         self.node_begin = node_begin
         self.node_end = node_end
-        self.fitting_algorithm = fitting_algorithm
+        self.discrete_points: Optional[List[TrajNode]] = None
+        self.fitting_algorithm = None
+
+    def set_discrete_points(self, node_list: List[TrajNode]):
+        self.discrete_points = node_list
+
+    @property
+    def discrete_points_reference(self):
+        return self.discrete_points
 
     @property
     def length(self) -> float:
@@ -77,8 +86,8 @@ class TrajEdge:
         如果有 fitting_algorithm，使用它生成点；
         否则默认线性插值。
         """
-        if self.fitting_algorithm:
-            return self.fitting_algorithm(self)
+        if self.discrete_points is not None:
+            return self.discrete_points
         else:
             # 默认：线性插值
             points = []
@@ -94,6 +103,7 @@ class TrajEdge:
         return f"TrajEdge({self.node_begin} → {self.node_end}, algo={algo_name})"
 
 
+# abandoned
 class Traj:
     # 单个轨迹
     def __init__(
@@ -112,7 +122,6 @@ class Traj:
             edge = TrajEdge(
                 node_begin=nodes[i],
                 node_end=nodes[i + 1],
-                fitting_algorithm=default_fitting_algorithm
             )
             self.edges.append(edge)
 
@@ -149,7 +158,7 @@ class Traj:
             self.nodes = [node]
             return
         last_node = self.nodes[-1]
-        new_edge = TrajEdge(last_node, node, self.default_fitting_algorithm)
+        new_edge = TrajEdge(last_node, node)
         self.nodes.append(node)
         self.edges.append(new_edge)
 
@@ -171,7 +180,6 @@ class Traj:
             edge = TrajEdge(
                 node_begin=self.nodes[i],
                 node_end=self.nodes[i + 1],
-                fitting_algorithm=self.default_fitting_algorithm
             )
             self.edges.append(edge)
 

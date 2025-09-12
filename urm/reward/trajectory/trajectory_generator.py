@@ -14,12 +14,13 @@ from urm.reward.trajectory.prediction.model import Model
 from urm.reward.trajectory.risk import Risk
 from urm.reward.trajectory.traj import TrajNode, TrajEdge
 from urm.reward.trajectory.traj_tree import TrajTree
+from urm.reward.trajectory.fitting import *
 
 
 class TrajectoryGenerator:
     def __init__(self, ego_state: EgoState, surrounding_states: SurroundingState, env_condition: State,
                  behaviors: List[Behavior],
-                 prediction_model: Model, config: Config = None):
+                 prediction_model: Model, config: Config):
         self.env_condition = env_condition.env_condition
         self.config: Optional[Config] = config
         self.surrounding_states = surrounding_states
@@ -28,6 +29,18 @@ class TrajectoryGenerator:
         self.prediction_model = prediction_model
         self.prediction_result: [[Region2D]] = None
         self.predict_collision_region()
+        self.fitting_algorithm: Fitting = create_fitting_from_config(self.config)
+
+    def fitting_edge(self, edge: TrajEdge):
+        self.fitting_algorithm.fit_edge_by_node(edge)
+
+    def set_edge_risk(self, edge: TrajEdge):
+        last_risk = edge.node_end.risk
+        for i in reversed(range(0, len(edge.discrete_points))):
+            risk = last_risk.get_value() * max(self.config.reward.discount_factor_max - edge.discrete_points[
+                i].velocity.magnitude / self.config.reward.velocity_unit, self.config.reward.discount_factor_min)
+            edge.discrete_points[i].risk.set_value(t=edge.discrete_points[i].get_time(), risk=risk,
+                                                   speed=edge.discrete_points[i].velocity.magnitude)
 
     def predict_collision_region(self):
         """
@@ -68,6 +81,7 @@ class TrajectoryGenerator:
         tree = TrajTree.from_node(root_node)
         for child_tree in tree_list:
             edge = TrajEdge(root_node, child_tree.root)
+            self.fitting_edge(edge)
             tree.add_child(edge, child_tree)
         return tree
 
@@ -124,47 +138,46 @@ class TrajectoryGenerator:
     def set_risk_backpropagation(self, tree: TrajTree):
         root = tree.root
         if self.judge_surrounding_collision(root):
-            self.set_tree_risk(tree, self.config.reward.risk_max_for_tree)
+            self.set_tree_risk_unification(tree, self.config.reward.risk_max_for_tree)
             return
         else:
             for edge in tree.children_edges:
-                position_list = edge.sample()
+                sample_nodes = edge.sample()
                 collision = False
-                for pos in position_list:
-                    sample_node = TrajNode.from_position(pos)
-                    # todo:目前只能使用这个边的开始节点的时间步来当作这个边的时间步
-                    sample_node.set_timestep(edge.node_begin.get_time())
+                for sample_node in sample_nodes:
+                    assert isinstance(sample_node, TrajNode), "sample node is not type of TrajNode!"
                     if self.judge_surrounding_collision(sample_node):
                         collision = True
                         break
                 if collision:
-                    self.set_tree_risk(tree.get_subtree_by_edge(edge), self.config.reward.risk_max_for_tree)
+                    # todo：直接根据这个整条边是否被撞，然后来直接负值整条边的risk，不合理，需要更加精细化
+                    self.set_tree_risk_unification(tree.get_subtree_by_edge(edge), self.config.reward.risk_max_for_tree)
                 else:
                     self.set_risk_backpropagation(tree.get_subtree_by_edge(edge))
 
-            child_tree_num = 0.0
-            child_tree_risk_total = 0.0
-            for _, child_tree in tree.iter_children():
-                all_nodes = child_tree.get_all_nodes()
-                risk_all = 0.0
-                for n in all_nodes:
-                    risk_all += n.risk.get_value(n.get_time())
-                child_tree_risk_total += risk_all / len(all_nodes)
-                child_tree_num += 1
-            if child_tree_num == 0.0:
+            if len(tree.children_trees) == 0:
                 root.set_risk_value(0, root.velocity.magnitude)
-            risk_value = Risk.calculate_last_risk_value(
-                child_tree_risk_total / child_tree_num, root.velocity.magnitude, self.config.reward.velocity_unit
-                , self.config.reward.discount_factor_max, self.config.reward.discount_factor_min)
-            root.set_risk_value(risk_value, root.velocity.magnitude)
+                return
+            else:
+                risk_value = 0.0
+                for edge in tree.children_edges:
+                    assert len(edge.discrete_points) != 0, "edge.discrete_points == 0 when set_risk_backpropagation"
+                    self.set_edge_risk(edge)
+                    risk_value += edge.discrete_points[0].risk.get_value()
+                root.set_risk_value(risk_value / len(tree.children_edges))
         return
 
-    def set_tree_risk(self, tree: TrajTree, value):
+    def set_tree_risk_unification(self, tree: TrajTree, value):
         if tree is None:
             return
         tree.root.set_risk_value(value, tree.root.velocity.magnitude)
+        for child_edge in tree.children_edges:
+            assert (child_edge.discrete_points is not None) and (
+                    len(child_edge.discrete_points) > 0), "child edge discrete points is nil!"
+            for p in child_edge.discrete_points:
+                p.set_risk_value(risk=value)
         for child_tree in tree.children_trees:
-            self.set_tree_risk(child_tree, value)
+            self.set_tree_risk_unification(child_tree, value)
 
     def judge_conventional_collision(self, position: Position):
         return self.env_condition.judge_match_road(position)
