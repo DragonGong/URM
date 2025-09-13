@@ -62,7 +62,9 @@ class TrajectoryGenerator:
         root_node = TrajNode.from_car_state(self.ego_state)
         traj_tree = self.traj_tree_generated_by_behaviors(root_node, self.ego_state, self.behaviors, step_nums,
                                                           duration)
+        traj_tree.visualize_plot_nb(show_direction=False)
         traj_tree = self.traj_tree_cut(traj_tree)
+        traj_tree.visualize_plot_nb(show_direction=False)
         return traj_tree
 
     def traj_tree_generated_by_behaviors(self, root_node: TrajNode, ego_state: CarState, behaviors: List[Behavior],

@@ -41,7 +41,7 @@ model_config:
   gradient_steps: 1
   target_update_interval: 50
   verbose: 1
-  tensorboard_log: "highway_dqn/"
+#  tensorboard_log: "highway_dqn/"
 
 reward:
   step_num: 3
@@ -60,11 +60,11 @@ reward:
 
   prediction_model: "linear_model"
   prediction_model_configs:
-    linear_model_config: {}
+    linear_model_config: { }
 
   fitting_model: "polynomial"
   fitting_model_config:
-    polynomial: {}
+    polynomial: { }
 
   behavior_configs:
     behaviors_list: [ "lateral_left","lateral_right","soft_accel","hard_accel","soft_decel","hard_decel" ]
@@ -72,9 +72,14 @@ reward:
   riskmap_config:
     cell_size: 0.5
 
+  # 可视化配置
+  visualize: true
+  plt_show: false
+
 training:
   total_timesteps: 10000
   save_dir: "./agent"
+  render_mode: "human" # 不能和
 
 test_config:
   model_path: "./agent/default_model"

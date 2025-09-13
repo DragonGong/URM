@@ -1,3 +1,5 @@
+import time
+
 from matplotlib.patches import FancyArrowPatch
 from urm.reward.state.utils.position import Position
 from urm.reward.trajectory.traj import TrajNode, TrajEdge
@@ -210,6 +212,105 @@ class TrajTree:
             plt.tight_layout()
             plt.show()
 
+    def visualize_plot_nb(
+            self,
+            show_nodes=True,
+            show_edges=True,
+            show_sample_points=False,
+            sample_points_num=10,
+            node_color='red',
+            edge_color='blue',
+            sample_point_color='green',
+            node_size=50,
+            title="Trajectory Tree Visualization",
+            show_grid=True,
+            show_legend=True,
+            show_direction=True,
+            dpi=100,
+            fig_id="traj_tree_fig"
+    ):
+        """
+        非阻塞可视化：自动关闭旧窗口，不阻塞主线程。
+        修复了“关闭后新窗口不显示”的问题。
+        """
+        import matplotlib.pyplot as plt
+        plt.close('all')
+        # 启用交互模式
+        plt.ion()
+
+        # 查找并关闭旧图（通过 fig_id 标记）
+        for fig_num in plt.get_fignums():
+            f = plt.figure(fig_num)
+            if getattr(f, '_traj_tree_id', None) == fig_id:
+                plt.close(f)
+                plt.pause(0.1)
+                break
+
+        all_nodes = self.get_all_nodes()
+        all_edges = self.get_all_edges()
+
+        # 创建新图
+        fig, ax = plt.subplots(figsize=(10, 8), dpi=dpi)
+        fig._traj_tree_id = fig_id  # 标记这个图
+
+        # 绘制节点
+        if show_nodes:
+            x_nodes = [node.x for node in all_nodes]
+            y_nodes = [node.y for node in all_nodes]
+            ax.scatter(x_nodes, y_nodes, color=node_color, s=node_size, zorder=5,
+                       label='TrajNode' if show_legend else "")
+            for i, node in enumerate(all_nodes):
+                ax.text(node.x + 0.02, node.y + 0.02, str(i + 1), fontsize=9, color='darkred')
+
+        # 绘制边
+        if show_edges:
+            for edge in all_edges:
+                sampled = edge.sample(sample_points_num)
+                x_vals = [p.x for p in sampled]
+                y_vals = [p.y for p in sampled]
+
+                if show_direction and len(x_vals) > 1:
+                    for i in range(len(x_vals) - 1):
+                        arrow = FancyArrowPatch(
+                            (x_vals[i], y_vals[i]),
+                            (x_vals[i + 1], y_vals[i + 1]),
+                            arrowstyle='->,head_width=1.5,head_length=2',
+                            color=edge_color,
+                            alpha=0.8,
+                            linewidth=2,
+                            mutation_scale=10,
+                            zorder=3
+                        )
+                        ax.add_patch(arrow)
+                else:
+                    ax.plot(x_vals, y_vals, color=edge_color, linewidth=2, zorder=3,
+                            label='TrajEdge' if show_legend and edge == all_edges[0] else "")
+
+                if show_sample_points:
+                    ax.scatter(x_vals[1:-1], y_vals[1:-1], color=sample_point_color, s=15, zorder=4,
+                               label='Sample Point' if show_legend and edge == all_edges[0] else "")
+
+        # ax.set_aspect('equal', adjustable='box')
+        ax.set_xlabel("X")
+        ax.set_ylabel("Y")
+        ax.set_title(title)
+        if show_grid:
+            ax.grid(True, linestyle='--', alpha=0.6)
+        if show_legend:
+            handles, labels = ax.get_legend_handles_labels()
+            by_label = dict(zip(labels, handles))
+            ax.legend(by_label.values(), by_label.keys())
+
+        ax.autoscale()
+        plt.tight_layout()
+
+        fig.canvas.draw_idle()
+        fig.canvas.flush_events()
+
+        plt.show(block=False)
+        plt.draw()
+        plt.pause(0.01)  # 确保窗口弹出
+
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
@@ -239,9 +340,25 @@ if __name__ == "__main__":
     root_tree.add_child(e3, leaf4)
 
     # 可视化！
-    root_tree.visualize_plot(
+    # 第一次调用
+    root_tree.visualize_plot_nb(
         show_sample_points=True,
         sample_points_num=20,
         show_direction=True,
-        title="Trajectory Tree with Sampled Points & Direction Arrows"
+        title="First Plot"
     )
+
+    time.sleep(3)
+
+    root_tree.visualize_plot_nb(
+        show_sample_points=True,
+        sample_points_num=20,
+        show_direction=True,
+        title="Second Plot (Auto Replaced)"
+    )
+    print("程序继续运行中... 按 Ctrl+C 退出")
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("退出程序")
