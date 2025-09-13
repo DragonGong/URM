@@ -86,6 +86,14 @@ class TrajTree:
             nodes.extend(child.get_all_nodes())
         return nodes
 
+    def get_all_nodes_with_edge_nodes(self) -> List[TrajNode]:
+        nodes = [self.root]
+        assert self._children is not None, "self._children is none"
+        for edge, child_tree in self._children:
+            nodes.extend(edge.sample())
+            nodes.extend(child_tree.get_all_nodes_with_edge_nodes())
+        return nodes
+
     def get_all_edges(self) -> List[TrajEdge]:
         edges = [edge for edge, _ in self._children]
         for _, child in self._children:

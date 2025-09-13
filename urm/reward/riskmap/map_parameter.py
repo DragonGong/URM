@@ -1,4 +1,0 @@
-
-
-class MapParameter:
-    pass

@@ -6,7 +6,7 @@ from .fitting import ModelName
 from urm.reward.trajectory.traj import TrajEdge, TrajNode
 
 from urm.config import Config
-from ...state.utils.velocity import Velocity
+from urm.reward.state.utils.velocity import Velocity
 
 
 @register_fitting(ModelName.Polynomial)

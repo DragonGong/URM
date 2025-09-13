@@ -73,12 +73,16 @@ class Config:
             def __init__(self, **kwargs):
                 pass
 
+        class RiskMapConfig:
+            def __init__(self, **kwargs):
+                self.cell_size = kwargs.get("cell_size", 0.5)
+
         def __init__(self, **kwargs):
             # 轨迹树建立参数
             self.step_num = kwargs.get("step_num", 3)
             self.duration = kwargs.get("duration", 1)  # 单位是秒
 
-            # old 参数
+            # general 参数
             self.desired_speed = kwargs.get("desired_speed", 20)
             self.r_safe_w = kwargs.get("r_safe_w", 0.7)
             self.r_speed_w = kwargs.get("r_speed_w", 0.2)
@@ -104,6 +108,9 @@ class Config:
 
             # 行为列表
             self.behavior_configs = self.BehaviorConfigs(**kwargs.get("behavior_configs", {}))
+
+            # riskmap config
+            self.riskmap_config = self.RiskMapConfig(**kwargs.get("riskmap_config", {}))
 
     class TrainingConfig:
         def __init__(self, **kwargs):
