@@ -9,6 +9,7 @@ from urm.reward.trajectory.traj import TrajEdge, TrajNode
 class Fitting(ABC):
     def __init__(self, config: Config.RewardConfig.FittingModelConfigs, **kwargs):
         self.config = config
+        self.interval_duration: float = config.interval_duration
 
     @abstractmethod
     def fit_edge_by_node(self, edge: TrajEdge) -> List[TrajNode]:

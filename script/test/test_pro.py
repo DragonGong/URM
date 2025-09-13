@@ -2,7 +2,7 @@ from urm.config.config import Config
 from urm.test import test_model
 
 
-def load_config(config_path="config/config_baseline.yaml"):
+def load_config(config_path="config/config.yaml"):
     import yaml
     with open(config_path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)

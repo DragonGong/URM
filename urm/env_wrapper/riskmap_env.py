@@ -18,6 +18,6 @@ class RiskMapEnv(Env):
 
         ego_state = EgoState.from_vehicle(env.vehicle, env=env)
         surrounding_state = SurroundingState.from_road_vehicles(road_vehicles=env.road.vehicles,
-                                                                exclude_vehicle=env.vehicle,env=env)
-        reward = self.reward.reward(ego_state, surrounding_state, base_line_reward)
+                                                                exclude_vehicle=env.vehicle, env=env)
+        reward = self.reward.reward(ego_state, surrounding_state, self, base_line_reward)
         return obs, reward, terminated, truncated, info

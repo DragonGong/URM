@@ -1,9 +1,12 @@
 # ===== 全局工厂 =====
+from typing import Dict, Type
+
 from urm.config import Config
+from urm.reward.trajectory.behavior import Behavior
 
 
 class BehaviorFactory:
-    _registry = {}
+    _registry: Dict[str, Type[Behavior]] = {}
 
     def __init__(self, config: Config.RewardConfig.BehaviorConfigs):
         self.config = config
@@ -37,3 +40,16 @@ class BehaviorFactory:
         返回一个 dict: {name: class}
         """
         return dict(cls._registry)
+
+    def get_all_behaviors_by_config(self):
+        """
+        根据 BehaviorConfigs.behavior_configs 列表返回注册的行为类
+        返回 dict: {behavior_name: class}
+        """
+        instances = []
+        for name in getattr(self.config, "behavior_configs", []):
+            if name in self._registry:
+                instances.append(self._registry[name](self.config.behavior_configs))
+            else:
+                print(f"Warning: Behavior '{name}' 配置了但未注册")
+        return instances

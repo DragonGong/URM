@@ -11,9 +11,8 @@ from urm.reward.state.utils.velocity import Velocity
 
 @register_fitting(ModelName.Polynomial)
 class Polynomial(Fitting):
-    def __init__(self, config: Config.RewardConfig.FittingModelConfigs, interval_duration: float, **kwargs):
+    def __init__(self, config: Config.RewardConfig.FittingModelConfigs, **kwargs):
         super().__init__(config, **kwargs)
-        self.interval_duration = interval_duration
 
     def fit_edge_by_node(self, edge: TrajEdge) -> List[TrajNode]:
         """

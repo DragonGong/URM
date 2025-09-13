@@ -23,9 +23,9 @@ def get_fitting_class(name: str) -> Type[Fitting]:
 
 
 def create_fitting_from_config(config: Config) -> Fitting:
-    fitting_type = config.reward.prediction_model
+    fitting_type = config.reward.fitting_model
     if not fitting_type:
         raise ValueError("Config must contain 'prediction_model' field")
     fitting_cls = get_fitting_class(fitting_type)
-    fitting = fitting_cls(**config.reward.fitting_model_configs)
+    fitting = fitting_cls(config.reward.fitting_model_configs)
     return fitting

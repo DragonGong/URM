@@ -3,7 +3,7 @@ from urm.train import train_model
 from urm.config import Config
 
 
-def load_config_as_object(config_path="config/config_baseline.yaml"):
+def load_config_as_object(config_path="config/config.yaml"):
     with open(config_path, 'r', encoding='utf-8') as f:
         config_dict = yaml.safe_load(f)
     return Config(config_dict)

@@ -73,6 +73,10 @@ class CarState(State):
         return self._velocity.magnitude
 
     @property
+    def position_cls(self):
+        return self._position
+
+    @property
     def position(self):
         """返回当前位置元组 (x, y)"""
         return self._position.xy

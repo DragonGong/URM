@@ -27,7 +27,7 @@ class TrajectoryGenerator:
         self.ego_state = ego_state
         self.behaviors = behaviors
         self.prediction_model = prediction_model
-        self.prediction_result: [[Region2D]] = None
+        self.prediction_result: [[Region2D]] = []
         self.predict_collision_region()
         self.fitting_algorithm: Fitting = create_fitting_from_config(self.config)
 
@@ -72,7 +72,7 @@ class TrajectoryGenerator:
             return TrajTree.from_node(root_node)
         tree_list = []
         for b in behaviors:
-            car_state = b.target_state(ego_state.position, HighwayState.from_carstate(ego_state, duration))
+            car_state = b.target_state(ego_state.position_cls, HighwayState.from_carstate(ego_state, duration))
             # 建节点的时候，就会把速度引进去
             node = TrajNode.from_car_state(car_state)
             node.set_timestep(time_step + 1)

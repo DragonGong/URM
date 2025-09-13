@@ -1,6 +1,7 @@
 import math
 from abc import ABC, abstractmethod
 
+from urm.config import Config
 from urm.reward.state.car_state import CarState
 from urm.reward.state.utils.position import Position
 from urm.reward.trajectory.highway_env_state import HighwayState as State
@@ -12,6 +13,9 @@ from .behaviors import Behavior
 class LongitudinalBehavior(Behavior):
     """Base class for longitudinal behaviors."""
 
+    def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
+        super().__init__(config, **kwargs)
+
     @abstractmethod
     def target_state(self, initial_position: Position, state: State) -> CarState:
         pass
@@ -22,6 +26,9 @@ class LongitudinalBehavior(Behavior):
 
 
 class LongitudinalCruise(LongitudinalBehavior):
+    def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
+        super().__init__(config, **kwargs)
+
     def target_state(self, initial_position: Position, state: State) -> CarState:
         v = state.velocity
         vx, vy = v.vx, v.vy
@@ -47,6 +54,9 @@ class LongitudinalCruise(LongitudinalBehavior):
 
 @BehaviorFactory.register("soft_accel")
 class SoftAcceleration(LongitudinalBehavior):
+    def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
+        super().__init__(config, **kwargs)
+
     def target_state(self, initial_position: Position, state: State) -> CarState:
         v = state.velocity
         vx, vy = v.vx, v.vy
@@ -89,6 +99,9 @@ class SoftAcceleration(LongitudinalBehavior):
 
 @BehaviorFactory.register("hard_accel")
 class HardAcceleration(LongitudinalBehavior):
+    def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
+        super().__init__(config, **kwargs)
+
     def target_state(self, initial_position: Position, state: State) -> CarState:
         v = state.velocity
         vx, vy = v.vx, v.vy
@@ -131,6 +144,9 @@ class HardAcceleration(LongitudinalBehavior):
 
 @BehaviorFactory.register("soft_decel")
 class SoftDeceleration(LongitudinalBehavior):
+    def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
+        super().__init__(config, **kwargs)
+
     def target_state(self, initial_position: Position, state: State) -> CarState:
         v = state.velocity
         vx, vy = v.vx, v.vy
@@ -172,6 +188,9 @@ class SoftDeceleration(LongitudinalBehavior):
 
 @BehaviorFactory.register("hard_decel")
 class HardDeceleration(LongitudinalBehavior):
+    def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
+        super().__init__(config, **kwargs)
+
     def target_state(self, initial_position: Position, state: State) -> CarState:
         v = state.velocity
         vx, vy = v.vx, v.vy

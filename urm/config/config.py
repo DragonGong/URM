@@ -59,7 +59,8 @@ class Config:
                     pass
 
             def __init__(self, **kwargs):
-                self.polynomial_config = self.Polynomial(**kwargs.get("polynomial",{}))
+                self.polynomial_config = self.Polynomial(**kwargs.get("polynomial", {}))
+                self.interval_duration = kwargs.get("interval_duration", 0.1)
 
         class PredictionModelConfigs:
             class LinearModelConfig:
@@ -71,7 +72,7 @@ class Config:
 
         class BehaviorConfigs:
             def __init__(self, **kwargs):
-                pass
+                self.behavior_configs = kwargs.get("behaviors_list", [])
 
         class RiskMapConfig:
             def __init__(self, **kwargs):
@@ -103,7 +104,7 @@ class Config:
             self.prediction_model_configs = self.PredictionModelConfigs(**kwargs.get("prediction_model_configs", {}))
 
             # 拟合模型：
-            self.fitting_model = kwargs.get("fitting_model", "frenet")
+            self.fitting_model = kwargs.get("fitting_model", "polynomial")
             self.fitting_model_configs = self.FittingModelConfigs(**kwargs.get("fitting_model_config", {}))
 
             # 行为列表
@@ -135,6 +136,7 @@ class Config:
         self.test_config = self.TestConfig(**config_dict.get("test_config", {}))
 
         self.env_wrapper = config_dict.get("env_wrapper", "baseline")
+
     def to_dict(self):
         """将整个 Config 对象转换为嵌套字典,会过滤掉私有变量，_ 开头的这种"""
 

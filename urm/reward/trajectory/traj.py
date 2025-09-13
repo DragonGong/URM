@@ -26,7 +26,7 @@ class TrajNode(Position):
         :param state:
         :return:
         """
-        node = cls.from_position(state.position)
+        node = cls.from_position(Position.from_tuple(state.position))
         node.set_velocity(state.velocity)
         return node
 

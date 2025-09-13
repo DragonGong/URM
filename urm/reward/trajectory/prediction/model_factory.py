@@ -27,5 +27,5 @@ def create_model_from_config(config: Config) -> Model:
     if not model_type:
         raise ValueError("Config must contain 'type' field")
     model_cls = get_model_class(model_type)
-    model = model_cls(**config.reward.prediction_model_configs)
+    model = model_cls(config.reward.prediction_model_configs)
     return model

@@ -6,6 +6,7 @@ from urm.reward.riskmap.risk_map import RiskMap
 from urm.reward.riskmap.riskmap_manager import RiskMapManager
 from urm.reward.state.ego_state import EgoState
 from urm.reward.state.interface import EnvInterface
+from urm.reward.state.state import State
 from urm.reward.state.surrounding_state import SurroundingState
 from urm.reward.trajectory.behavior import BehaviorFactory
 from urm.reward.trajectory.trajectory_generator import TrajectoryGenerator
@@ -19,7 +20,7 @@ class RiskMapReward(RewardMeta):
         self.riskmap_manager = Optional[RiskMapManager]
         self.behavior_factory = BehaviorFactory(config.reward.behavior_configs)
         self.prediction_model = create_model_from_config(self.config)
-        self.behaviors = self.behavior_factory.get_all_behaviors()
+        self.behaviors = self.behavior_factory.get_all_behaviors_by_config()
 
     def reward(self, ego_state: EgoState, surrounding_states: SurroundingState, env_condition: EnvInterface,
                baseline_reward):
@@ -35,8 +36,10 @@ class RiskMapReward(RewardMeta):
         return self.config.reward.baseline_reward_w * baseline + (
                 1 - self.config.reward.baseline_reward_w) * custom_risk
 
-    def riskmap_manager_create(self, ego_state, surrounding_states, env_condition):
-        trajs = TrajectoryGenerator(ego_state, surrounding_states, env_condition=env_condition,
+    def riskmap_manager_create(self, ego_state: EgoState, surrounding_states: SurroundingState,
+                               env_condition: EnvInterface):
+        global_state = State(env=env_condition)
+        trajs = TrajectoryGenerator(ego_state, surrounding_states, env_condition=global_state,
                                     behaviors=self.behaviors,
                                     prediction_model=self.prediction_model, config=self.config).generate_right(
             self.config.reward.step_num,

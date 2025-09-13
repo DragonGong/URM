@@ -2,15 +2,20 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
+from urm.config import Config
 from urm.reward.state.car_state import CarState
 from urm.reward.state.utils.position import Position
 from urm.reward.trajectory.highway_env_state import HighwayState as State
+from . import BehaviorFactory
 
 from .behaviors import Behavior
 
 
 class LateralBehavior(Behavior):
     """Base class for lateral behaviors."""
+
+    def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
+        super().__init__(config, **kwargs)
 
     @abstractmethod
     def target_state(self, initial_position: Position, state: State) -> CarState:
@@ -22,6 +27,9 @@ class LateralBehavior(Behavior):
 
 
 class LateralKeep(LateralBehavior):
+    def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
+        super().__init__(config, **kwargs)
+
     # 暂时没用处
     def target_state(self, initial_position: Position, state: State) -> CarState:
         pass
@@ -30,7 +38,11 @@ class LateralKeep(LateralBehavior):
         return root_offset
 
 
+@BehaviorFactory.register("lateral_left")
 class LateralLeft(LateralBehavior):
+    def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
+        super().__init__(config, **kwargs)
+
     def target_state(self, initial_position: Position, state: State) -> CarState:
         v = state.velocity
         vx, vy = v.vx, v.vy
@@ -68,7 +80,11 @@ class LateralLeft(LateralBehavior):
         return root_offset - (0.3 if state.velocity < 5 else 0.5)
 
 
+@BehaviorFactory.register("lateral_right")
 class LateralRight(LateralBehavior):
+    def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
+        super().__init__(config, **kwargs)
+
     def target_state(self, initial_position: Position, state: State) -> CarState:
         v = state.velocity
         vx, vy = v.vx, v.vy

@@ -12,7 +12,6 @@ class Env(gym.Wrapper):
     def __init__(self, env):
         super().__init__(env)
 
-
     def _extract_xy(self, pos: Any) -> Tuple[float, float]:
         """
         从多种输入格式中提取 x, y 坐标
@@ -48,8 +47,9 @@ class Env(gym.Wrapper):
         Returns:
             bool: True 表示在道路上（安全），False 表示已离开或碰撞
         """
+        env = self.env.unwrapped
         position = self._extract_xy(pos)
-        road = self.env.road
+        road = env.road
 
         for lane in road.network.lanes_list():
             longitudinal, lateral = lane.local_coordinates(position)
