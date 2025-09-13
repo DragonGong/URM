@@ -7,8 +7,8 @@ from urm.config import Config
 
 # 改了一点，但是大部分gpt
 class BaselineEnv(Env):
-    def __init__(self, env, config: Union[Config, dict]):
-        super().__init__(env)
+    def __init__(self, env, config: Union[Config, dict], **kwargs):
+        super().__init__(env, **kwargs)
         if isinstance(config, Config):
             self.config = config.to_dict()
         self.config = config

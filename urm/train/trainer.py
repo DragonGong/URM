@@ -6,6 +6,7 @@ import gymnasium as gym
 from stable_baselines3 import DQN, PPO, A2C
 from stable_baselines3.common.vec_env import DummyVecEnv
 
+from urm.config import Config
 from urm.env_wrapper.baseline_env import BaselineEnv
 import highway_env
 
@@ -36,13 +37,13 @@ def make_env(config, render_mode=None):
     return env
 
 
-def train_model(config):
+def train_model(config: Config):
     """
     训练函数，接收 Config 对象，自动选择算法并训练
 
     :param config: Config 实例（包含 env_config, model_config, training 等）
     """
-    env = DummyVecEnv([lambda: make_env(config)])
+    env = DummyVecEnv([lambda: make_env(config, config.training.render_mode)])
 
     algo_name = config.model_config.algorithm  # 如 "DQN", "PPO"
     if algo_name not in ALGORITHM_MAP:

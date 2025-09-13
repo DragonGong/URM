@@ -49,7 +49,7 @@ class Config:
             self.gradient_steps = kwargs.get("gradient_steps", 1)
             self.target_update_interval = kwargs.get("target_update_interval", 50)
             self.verbose = kwargs.get("verbose", 1)
-            self.tensorboard_log = kwargs.get("tensorboard_log", "highway_dqn/")
+            self.tensorboard_log = kwargs.get("tensorboard_log", None)
 
     class RewardConfig:
 
@@ -113,10 +113,15 @@ class Config:
             # riskmap config
             self.riskmap_config = self.RiskMapConfig(**kwargs.get("riskmap_config", {}))
 
+            # 可视化
+            self.visualize = kwargs.get("visualize", False)
+            self.plt_show = kwargs.get("plt_show", False)
+
     class TrainingConfig:
         def __init__(self, **kwargs):
             self.total_timesteps = kwargs.get("total_timesteps", 10000)
             self.save_dir = kwargs.get("save_dir", "./agent")
+            self.render_mode = kwargs.get("render_mode", None)  # 默认不渲染
 
     class TestConfig:
         def __init__(self, **kwargs):

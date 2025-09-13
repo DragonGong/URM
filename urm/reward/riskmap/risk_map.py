@@ -52,6 +52,19 @@ class RiskMap:
         if created:
             plt.tight_layout()
 
+    def get_visualization_data(self):
+        """
+        返回可视化所需数据，不进行绘图
+        返回字典:
+        {
+            'risk_avg': np.ndarray,
+            'extent': (x_min, x_max, y_min, y_max)
+        }
+        """
+        risk_avg = self.finalize()
+        extent = (float(self.x_min), float(self.x_max), float(self.y_min), float(self.y_max))
+        return {'risk_avg': risk_avg, 'extent': extent}
+    
     def get_risk_for_car(self, car: 'CarState', world_to_local) -> float:
         """
         给定一个 CarState（含世界坐标），计算它在 riskmap 上覆盖区域的平均风险。

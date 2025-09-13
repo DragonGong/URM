@@ -3,14 +3,16 @@ from typing import Union, Tuple, Any
 import gymnasium as gym
 import numpy as np
 
+from urm.config import Config
 from urm.reward.state.utils.position import Position
 from urm.reward.state.interface.env_interface import EnvInterface
 import highway_env
 
 
 class Env(gym.Wrapper):
-    def __init__(self, env):
+    def __init__(self, env, config :Config, **kwargs):
         super().__init__(env)
+        self.config = config
 
     def _extract_xy(self, pos: Any) -> Tuple[float, float]:
         """

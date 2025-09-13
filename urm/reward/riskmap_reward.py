@@ -11,6 +11,7 @@ from urm.reward.state.surrounding_state import SurroundingState
 from urm.reward.trajectory.behavior import BehaviorFactory
 from urm.reward.trajectory.trajectory_generator import TrajectoryGenerator
 from urm.reward.trajectory.prediction import *
+from urm.reward.utils.riskmap_visualizer import RiskMapVisualizer
 
 
 class RiskMapReward(RewardMeta):
@@ -21,6 +22,10 @@ class RiskMapReward(RewardMeta):
         self.behavior_factory = BehaviorFactory(config.reward.behavior_configs)
         self.prediction_model = create_model_from_config(self.config)
         self.behaviors = self.behavior_factory.get_all_behaviors_by_config()
+        if self.config.reward.visualize:
+            self.visualizer = RiskMapVisualizer(title="Training RiskMap", plt_show=config.reward.plt_show)
+        else:
+            self.visualizer = None
 
     def reward(self, ego_state: EgoState, surrounding_states: SurroundingState, env_condition: EnvInterface,
                baseline_reward):
@@ -29,6 +34,9 @@ class RiskMapReward(RewardMeta):
         self.riskmap_manager_create(ego_state=ego_state, surrounding_states=surrounding_states,
                                     env_condition=env_condition)
         riskmap_total: RiskMap = self.riskmap_manager.sum_all()
+        if self.visualizer is not None:
+            vis_data = riskmap_total.get_visualization_data()
+            self.visualizer.update(vis_data)
         return self.urm_risk(custom_risk=riskmap_total.get_risk_for_car(ego_state, self.riskmap_manager.world_to_local),
                              baseline=baseline_reward)
 
@@ -44,4 +52,6 @@ class RiskMapReward(RewardMeta):
                                     prediction_model=self.prediction_model, config=self.config).generate_right(
             self.config.reward.step_num,
             self.config.reward.duration)
+        if self.visualizer is not None:
+            trajs.visualize()
         self.riskmap_manager = RiskMapManager(config=self.config.reward, trajtree=trajs)
