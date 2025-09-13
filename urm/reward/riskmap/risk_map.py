@@ -3,7 +3,6 @@ import math
 import numpy as np
 from matplotlib import pyplot as plt
 from shapely.geometry import Polygon, box
-from urm.reward.riskmap.map_parameter import MapParameter
 from urm.reward.state.car_state import CarState
 from urm.reward.trajectory.traj_tree import TrajTree
 

@@ -59,7 +59,7 @@ class Config:
                     pass
 
             def __init__(self, **kwargs):
-                self.polynomial_config = self.Polynomial(**kwargs.get("polynomial"))
+                self.polynomial_config = self.Polynomial(**kwargs.get("polynomial",{}))
 
         class PredictionModelConfigs:
             class LinearModelConfig:
@@ -134,6 +134,7 @@ class Config:
         self.training = self.TrainingConfig(**config_dict.get("training", {}))
         self.test_config = self.TestConfig(**config_dict.get("test_config", {}))
 
+        self.env_wrapper = config_dict.get("env_wrapper", "baseline")
     def to_dict(self):
         """将整个 Config 对象转换为嵌套字典,会过滤掉私有变量，_ 开头的这种"""
 

@@ -5,7 +5,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from urm.config import Config
-from urm.reward.riskmap.map_parameter import MapParameter
 from urm.reward.riskmap.risk_map import RiskMap
 from urm.reward.trajectory.traj_tree import TrajTree
 
