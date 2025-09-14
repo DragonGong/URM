@@ -7,11 +7,9 @@ from urm.reward.state.ego_state import EgoState
 from urm.reward.state.region2d import Region2D
 from urm.reward.state.state import State
 from urm.reward.state.surrounding_state import SurroundingState
-from urm.reward.state.utils.position import Position
 from urm.reward.trajectory.behavior.behaviors import Behavior
 from urm.reward.trajectory.highway_env_state import HighwayState
 from urm.reward.trajectory.prediction.model import Model
-from urm.reward.trajectory.risk import Risk
 from urm.reward.trajectory.traj import TrajNode, TrajEdge
 from urm.reward.trajectory.traj_tree import TrajTree
 from urm.reward.trajectory.fitting import *
@@ -62,9 +60,9 @@ class TrajectoryGenerator:
         root_node = TrajNode.from_car_state(self.ego_state)
         traj_tree = self.traj_tree_generated_by_behaviors(root_node, self.ego_state, self.behaviors, step_nums,
                                                           duration)
-        traj_tree.visualize_plot_nb(show_direction=False)
+        # traj_tree.visualize_plot_nb(show_direction=False)
         traj_tree = self.traj_tree_cut(traj_tree)
-        traj_tree.visualize_plot_nb(show_direction=False)
+        # traj_tree.visualize_plot_nb(show_direction=False)
         return traj_tree
 
     def traj_tree_generated_by_behaviors(self, root_node: TrajNode, ego_state: CarState, behaviors: List[Behavior],
@@ -106,11 +104,11 @@ class TrajectoryGenerator:
             # ✅ 直接遍历绑定的 (edge, child_tree) 元组，语义清晰，绝对安全
             for edge, child_tree in tree.iter_children():
                 # 采样边上的点（默认10个点）
-                sampled_points = edge.sample(num_points=10)
+                sampled_points: List[TrajNode] = edge.sample(num_points=10)
 
                 # 检查所有采样点是否碰撞
                 collision_detected = any(
-                    self.judge_conventional_collision(point)
+                    self.judge_conventional_collision(point.car_state)
                     for point in sampled_points
                 )
 
@@ -181,14 +179,16 @@ class TrajectoryGenerator:
         for child_tree in tree.children_trees:
             self.set_tree_risk_unification(child_tree, value)
 
-    def judge_conventional_collision(self, position: Position):
-        return self.env_condition.judge_match_road(position)
+    def judge_conventional_collision(self, car_state: CarState):
+        return not self.env_condition.judge_on_road(x=car_state.x, y=car_state.y, length=car_state.vehicle_size.length,
+                                                    width=car_state.vehicle_size.width,
+                                                    direction=car_state.velocity.direction)
 
     def judge_surrounding_collision(self, node: TrajNode):
         # 这个函数需要在多个环节调用，为了效率只预测一遍
         # 与时间有关，所以是 节点 为输入（节点输入包含时间）
         assert self.prediction_result is not None, "prediction result is None!"
-        regions: [Region2D] = self.prediction_result[node.get_time() - 1]
+        regions: [Region2D] = self.prediction_result[int(node.get_time()) - 1]
         for region in regions:
             if region.contains(node.x, node.y):
                 return True

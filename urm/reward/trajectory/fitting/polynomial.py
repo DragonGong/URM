@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from .fitting import Fitting
 import numpy as np
 from typing import List
@@ -7,6 +9,7 @@ from urm.reward.trajectory.traj import TrajEdge, TrajNode
 
 from urm.config import Config
 from urm.reward.state.utils.velocity import Velocity
+from ...state.car_state import CarState
 
 
 @register_fitting(ModelName.Polynomial)
@@ -168,6 +171,10 @@ class Polynomial(Fitting):
             node.set_velocity(Velocity.from_tuple((float(vel_xy[0]), float(vel_xy[1]))))
             # 时间用起始时间加上 local_t（保持 float 精度）
             node.set_timestep(t0 + local_t)
+            cur_car_state = deepcopy(edge.node_begin.car_state)
+            cur_car_state.set_velocity(vel_xy[0], vel_xy[1])
+            cur_car_state.set_position(*node.xy)
+            node.set_car_state(cur_car_state)
             nodes.append(node)
 
         # write back to edge

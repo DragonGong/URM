@@ -1,6 +1,8 @@
+from copy import deepcopy
+
 from urm.reward.state.car_state import CarState
 from urm.reward.state.utils.position import Position
-from typing import List, Optional, Callable, Iterator
+from typing import List, Optional, Callable, Iterator, Union
 
 from urm.reward.state.utils.velocity import Velocity
 from urm.reward.trajectory.risk import Risk
@@ -12,12 +14,28 @@ class TrajNode(Position):
         self.risk: Optional[Risk] = kwargs.get('risk', None)
         self._time: float = 0  # 建树的时候就会赋值
         self.velocity: Optional[Velocity] = kwargs.get('velocity', None)
+        self._car_state: Optional[CarState] = kwargs.get('velocity', None)
 
     def get_time(self) -> float:
         return self._time
 
     def set_velocity(self, velocity: Velocity):
         self.velocity = velocity
+
+    @property
+    def car_state(self) -> CarState:
+        if self._car_state is None:
+            if self.velocity is None:
+                return CarState.from_position(self)
+            else:
+                cls = CarState.from_position(self)
+                cls.set_velocity(self.velocity.xy)
+                return cls
+        else:
+            return self._car_state
+
+    def set_car_state(self, car_state: CarState):
+        self._car_state = car_state
 
     @classmethod
     def from_car_state(cls, state: CarState):
@@ -28,6 +46,7 @@ class TrajNode(Position):
         """
         node = cls.from_position(Position.from_tuple(state.position))
         node.set_velocity(state.velocity)
+        node._car_state = deepcopy(state)
         return node
 
     @classmethod
@@ -80,7 +99,7 @@ class TrajEdge:
         """边的直线距离"""
         return self.node_begin.distance_to(self.node_end)
 
-    def sample(self, num_points: int = 10) -> List[Position]:
+    def sample(self, num_points: int = 10) -> Union[List[Position], List[TrajNode]]:
         """
         采样该边上的点。
         如果有 fitting_algorithm，使用它生成点；
@@ -98,9 +117,10 @@ class TrajEdge:
                 points.append(Position(x, y))
             return points
 
-    def __repr__(self) -> str:
-        algo_name = self.fitting_algorithm.__name__ if self.fitting_algorithm else "linear"
-        return f"TrajEdge({self.node_begin} → {self.node_end}, algo={algo_name})"
+
+def __repr__(self) -> str:
+    algo_name = self.fitting_algorithm.__name__ if self.fitting_algorithm else "linear"
+    return f"TrajEdge({self.node_begin} → {self.node_end}, algo={algo_name})"
 
 
 # abandoned

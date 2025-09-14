@@ -4,13 +4,14 @@ import gymnasium as gym
 import numpy as np
 
 from urm.config import Config
+from urm.reward.state.car_state import CarState
 from urm.reward.state.utils.position import Position
 from urm.reward.state.interface.env_interface import EnvInterface
 import highway_env
 
 
 class Env(gym.Wrapper):
-    def __init__(self, env, config :Config, **kwargs):
+    def __init__(self, env, config: Config, **kwargs):
         super().__init__(env)
         self.config = config
 
@@ -37,7 +38,7 @@ class Env(gym.Wrapper):
 
     def judge_match_road(
             self,
-            pos: Union[Tuple[float, float], Position, np.ndarray, dict],
+            pos: Union[Tuple[float, float], np.ndarray, dict],
             margin: float = 0.5
     ) -> bool:
         """
@@ -68,6 +69,52 @@ class Env(gym.Wrapper):
             return True  # 在安全区域内
 
         return False  # 不在任何车道内 → 离开道路
+
+    def judge_on_road(self, x, y, length, width, direction, margin: float = 0.2) -> bool:
+        """
+        判断车辆是否在大马路内（基于 lane 的 local_coordinates）,车的整个完整体都冲出马路才算在马路外。
+        Args:
+            vehicle: 车辆对象
+            margin: 安全余量
+        Returns:
+            bool: True=在马路上, False=冲出马路
+        """
+        env = self.env.unwrapped
+        road = env.road
+
+        cx, cy = x, y
+        length, width, heading = length, width, direction
+        corners = self._vehicle_corners(cx, cy, length, width, heading)
+
+        # 检查矩形四个角是否至少有一个点在任意 lane 内
+        for corner in corners:
+            for lane in road.network.lanes_list():
+                longitudinal, lateral = lane.local_coordinates(corner)
+
+                # 横向是否在车道范围内
+                if abs(lateral) <= lane.width / 2 - margin:
+                    # 纵向对无限车道不做限制
+                    if getattr(lane, "length", None) is None or \
+                            (0 - margin <= longitudinal <= lane.length + margin):
+                        return True
+        return False
+
+    def _vehicle_corners(self, cx, cy, length, width, heading):
+        """计算车辆矩形的四个角点"""
+        dx = length / 2
+        dy = width / 2
+        corners = np.array([
+            [dx, dy],
+            [dx, -dy],
+            [-dx, -dy],
+            [-dx, dy]
+        ])
+        # 旋转 + 平移
+        rot = np.array([
+            [np.cos(heading), -np.sin(heading)],
+            [np.sin(heading), np.cos(heading)]
+        ])
+        return [tuple(rot @ c + np.array([cx, cy])) for c in corners]
 
 
 if __name__ == "__main__":

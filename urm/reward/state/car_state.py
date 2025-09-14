@@ -18,7 +18,7 @@ class CarState(State):
     # ========== 保持外部接口不变 ==========
 
     @property
-    def vehicle_size(self):
+    def vehicle_size(self) -> VehicleSize:
         return self._vehicle_size
 
     @property
@@ -88,3 +88,7 @@ class CarState(State):
     def set_velocity(self, vx, vy):
         self._velocity.vx = vx
         self._velocity.vy = vy
+
+    @classmethod
+    def from_position(cls, position: Position):
+        return cls(position.x, position.y)

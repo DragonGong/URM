@@ -1,5 +1,4 @@
 from typing import Protocol, Any, Tuple, Union, runtime_checkable
-from urm.reward.state.utils.position import Position
 import numpy as np
 
 
@@ -10,7 +9,10 @@ class EnvInterface(Protocol):
 
     def judge_match_road(
             self,
-            pos: Union[Tuple[float, float], Position, np.ndarray, dict],
+            pos: Union[Tuple[float, float], np.ndarray, dict],
             margin: float = 0.5
     ) -> bool:
+        ...
+
+    def judge_on_road(self, x, y, length, width, direction, margin: float = 0.2) -> bool:
         ...
