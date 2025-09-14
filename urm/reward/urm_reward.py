@@ -1,30 +1,5 @@
 import numpy as np
-
-
-# 下面代码全部gpt生成
-# ============ Quintic Polynomial ============
-class QuinticPolynomial:
-    def __init__(self, xs, vxs, axs, xe, vxe, axe, T):
-        self.a0 = xs
-        self.a1 = vxs
-        self.a2 = axs / 2.0
-
-        A = np.array([
-            [T ** 3, T ** 4, T ** 5],
-            [3 * T ** 2, 4 * T ** 3, 5 * T ** 4],
-            [6 * T, 12 * T ** 2, 20 * T ** 3]
-        ])
-        b = np.array([
-            xe - self.a0 - self.a1 * T - self.a2 * T ** 2,
-            vxe - self.a1 - 2 * self.a2 * T,
-            axe - 2 * self.a2
-        ])
-        x = np.linalg.solve(A, b)
-        self.a3, self.a4, self.a5 = x
-
-    def calc_point(self, t):
-        return (self.a0 + self.a1 * t + self.a2 * t ** 2 + self.a3 * t ** 3 +
-                self.a4 * t ** 4 + self.a5 * t ** 5)
+from urm.reward.utils.quintic_polynomial import QuinticPolynomial
 
 
 # ============ 轨迹生成器 ============
@@ -81,7 +56,7 @@ def compute_risk(ego_traj, others_trajs, collision_radius=2.0):
         return 0.0
 
 
-def URM_reward(ego_state, surrounding_states):
+def URM_reward(ego_state, surrounding_states, train_config, baseline_reward=None):
     candidate_trajs = generate_candidate_trajectories(ego_state)
     others_trajs = predict_other_vehicles(surrounding_states)
 
@@ -91,11 +66,16 @@ def URM_reward(ego_state, surrounding_states):
 
     # 速度奖励
     ego_speed = np.linalg.norm([ego_state[2], ego_state[3]])
-    desired_speed = 30.0  # 目标速度
+    desired_speed = train_config['desired_speed']  # 目标速度
     R_speed = 1.0 - abs(ego_speed - desired_speed) / desired_speed
 
-
-
+    # 变道惩罚
+    lateral_velocity = abs(ego_state[3])
+    R_lateral = -train_config['v2r_w'] * lateral_velocity
     # 组合奖励
-    reward = 0.5 * R_safe + 0.5 * R_speed
+    reward = train_config['r_safe_w'] * R_safe + train_config['r_speed_w'] * R_speed + train_config[
+        'r_lateral_w'] * R_lateral
+    baseline_reward_w = train_config['baseline_reward_w']
+    if baseline_reward is not None:
+        reward = baseline_reward * baseline_reward_w + reward * (1 - baseline_reward_w)
     return reward
