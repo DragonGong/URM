@@ -4,8 +4,9 @@ from urm.config import Config
 
 import matplotlib
 
-# matplotlib.use('TkAgg')  # 在导入 pyplot 前设置后端
-matplotlib.use('MacOSX')
+matplotlib.use('TkAgg')  # 在导入 pyplot 前设置后端
+# matplotlib.use('MacOSX')
+
 
 def load_config_as_object(config_path="config/config.yaml"):
     with open(config_path, 'r', encoding='utf-8') as f:

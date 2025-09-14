@@ -47,7 +47,7 @@ class LateralLeft(LateralBehavior):
         v = state.velocity
         vx, vy = v.vx, v.vy
         duration = getattr(state, 'duration', 1.0)
-        LATERAL_OFFSET = 0.5
+        LATERAL_OFFSET = 4
         speed = np.sqrt(vx ** 2 + vy ** 2)
         if speed < 1e-6:
             # 如果速度几乎为0，则无法定义方向，直接横向偏移
@@ -89,7 +89,7 @@ class LateralRight(LateralBehavior):
         v = state.velocity
         vx, vy = v.vx, v.vy
         duration = getattr(state, 'duration', 1.0)
-        LATERAL_OFFSET = 0.5
+        LATERAL_OFFSET = 4
         speed = np.sqrt(vx ** 2 + vy ** 2)
         if speed < 1e-6:
             # 如果速度几乎为0，则无法定义方向，直接横向偏移

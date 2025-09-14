@@ -72,8 +72,14 @@ class TrajNode(Position):
         else:
             self.risk.set_value(t, risk, speed)
 
+    def __hash__(self):
+        return id(self)
+
     def __repr__(self) -> str:
         return f"TrajNode({self.x:.3f}, {self.y:.3f})"
+
+    def __eq__(self, other) -> bool:
+        return self is other
 
 
 class TrajEdge:

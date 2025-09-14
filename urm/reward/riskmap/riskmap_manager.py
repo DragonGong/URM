@@ -78,6 +78,8 @@ class RiskMapManager:
             new_map.risk_sum += rm.risk_sum
             new_map.count += rm.count
 
+        avg_risk = new_map.finalize()
+        new_map.risk_sum = avg_risk
         return new_map
 
 
@@ -99,7 +101,9 @@ def get_interval_index(time: float, duration: float, total_intervals: int = None
     if total_intervals is not None:
         if index < 0:
             raise ValueError(f"时间 {time} 小于 0，不在有效范围内")
-        if index >= total_intervals:
+        if index > total_intervals:
             raise ValueError(f"时间 {time} 超出最大范围（共 {total_intervals} 个时间段）")
+        if index == total_intervals:
+            index = total_intervals - 1
 
     return index

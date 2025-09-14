@@ -18,7 +18,7 @@ class RiskMapReward(RewardMeta):
     def __init__(self, config: Config, **kwargs):
         super().__init__(config, **kwargs)
         self.config = config
-        self.riskmap_manager = Optional[RiskMapManager]
+        self.riskmap_manager: Optional[RiskMapManager] = None
         self.behavior_factory = BehaviorFactory(config.reward.behavior_configs)
         self.prediction_model = create_model_from_config(self.config)
         self.behaviors = self.behavior_factory.get_all_behaviors_by_config()
@@ -29,16 +29,22 @@ class RiskMapReward(RewardMeta):
 
     def reward(self, ego_state: EgoState, surrounding_states: SurroundingState, env_condition: EnvInterface,
                baseline_reward):
-        assert self.riskmap_manager is not None, "riskmap_manager should be initialized"
-
+        if self.riskmap_manager is None:
+            urm_risk = baseline_reward
+        else:
+            riskmap_total: RiskMap = self.riskmap_manager.sum_all()
+            if self.visualizer is not None:
+                vis_data = riskmap_total.get_visualization_data()
+                self.visualizer.update(vis_data)
+            # riskmap_total.plot()
+            custom_risk = riskmap_total.get_risk_for_car(ego_state, self.riskmap_manager.world_to_local)
+            urm_risk = self.urm_risk(
+                custom_risk=custom_risk,
+                baseline=baseline_reward)
+            print(f"custom_risk is{custom_risk}")
         self.riskmap_manager_create(ego_state=ego_state, surrounding_states=surrounding_states,
                                     env_condition=env_condition)
-        riskmap_total: RiskMap = self.riskmap_manager.sum_all()
-        if self.visualizer is not None:
-            vis_data = riskmap_total.get_visualization_data()
-            self.visualizer.update(vis_data)
-        return self.urm_risk(custom_risk=riskmap_total.get_risk_for_car(ego_state, self.riskmap_manager.world_to_local),
-                             baseline=baseline_reward)
+        return urm_risk
 
     def urm_risk(self, custom_risk, baseline):
         return self.config.reward.baseline_reward_w * baseline + (
@@ -47,11 +53,14 @@ class RiskMapReward(RewardMeta):
     def riskmap_manager_create(self, ego_state: EgoState, surrounding_states: SurroundingState,
                                env_condition: EnvInterface):
         global_state = State(env=env_condition)
-        trajs = TrajectoryGenerator(ego_state, surrounding_states, env_condition=global_state,
-                                    behaviors=self.behaviors,
-                                    prediction_model=self.prediction_model, config=self.config).generate_right(
+        generator = TrajectoryGenerator(ego_state, surrounding_states, env_condition=global_state,
+                                        behaviors=self.behaviors,
+                                        prediction_model=self.prediction_model, config=self.config)
+        traj = generator.generate_right(
             self.config.reward.step_num,
             self.config.reward.duration)
+        generator.set_risk_backpropagation(traj)
         if self.visualizer is not None:
-            trajs.visualize()
-        self.riskmap_manager = RiskMapManager(config=self.config.reward, trajtree=trajs)
+            traj.visualize()
+        self.riskmap_manager = RiskMapManager(config=self.config.reward, trajtree=traj)
+        self.riskmap_manager.assign_risk()

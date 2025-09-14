@@ -2,9 +2,15 @@ import math
 
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 from shapely.geometry import Polygon, box
 from urm.reward.state.car_state import CarState
 from urm.reward.trajectory.traj_tree import TrajTree
+
+colors = [(1, 1, 1), (1, 0, 0)]  # 白色 -> 红色
+n_bins = 256  # 色彩等级数
+cmap_name = 'white_to_red'
+cm = LinearSegmentedColormap.from_list(cmap_name, colors, N=n_bins)
 
 
 class RiskMap:
@@ -33,7 +39,9 @@ class RiskMap:
 
     def plot(self, ax=None, title: str = "RiskMap", show_colorbar: bool = True, cmap='hot', interpolation='nearest'):
         risk_avg = self.finalize()
+        plt.close("all")
         if ax is None:
+            # plt.ion()
             fig, ax = plt.subplots(figsize=(6, 6))
             created = True
         else:
@@ -51,6 +59,32 @@ class RiskMap:
             plt.colorbar(cax, ax=ax)
         if created:
             plt.tight_layout()
+            plt.show(block=True)
+            plt.pause(0.001)
+
+    def plot_version_01(self, ax=None, title: str = "RiskMap", show_colorbar: bool = True, cmap=cm,
+                        interpolation='nearest'):
+        risk_avg = self.finalize()
+
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(8, 6))
+            created = True
+        else:
+            created = False
+
+        extent = (float(self.x_min), float(self.x_max), float(self.y_min), float(self.y_max))
+        cax = ax.imshow(risk_avg, origin='lower', extent=extent, cmap=cmap,
+                        interpolation=interpolation, aspect='auto')
+
+        ax.set_title(title)
+        ax.set_xlabel("local x (m)")
+        ax.set_ylabel("local y (m)")
+        if show_colorbar:
+            plt.colorbar(cax, ax=ax)
+        if created:
+            plt.tight_layout()
+            plt.show(block=True)
+        return
 
     def get_visualization_data(self):
         """
@@ -64,7 +98,7 @@ class RiskMap:
         risk_avg = self.finalize()
         extent = (float(self.x_min), float(self.x_max), float(self.y_min), float(self.y_max))
         return {'risk_avg': risk_avg, 'extent': extent}
-    
+
     def get_risk_for_car(self, car: 'CarState', world_to_local) -> float:
         """
         给定一个 CarState（含世界坐标），计算它在 riskmap 上覆盖区域的平均风险。

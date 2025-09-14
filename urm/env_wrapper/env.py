@@ -14,6 +14,7 @@ class Env(gym.Wrapper):
     def __init__(self, env, config: Config, **kwargs):
         super().__init__(env)
         self.config = config
+        print(f"get_road_width_info :{self.get_road_width_info()}")
 
     def _extract_xy(self, pos: Any) -> Tuple[float, float]:
         """
@@ -86,6 +87,7 @@ class Env(gym.Wrapper):
         length, width, heading = length, width, direction
         corners = self._vehicle_corners(cx, cy, length, width, heading)
 
+        # print(f"get_road_width_info :{self.get_road_width_info()}")
         # 检查矩形四个角是否至少有一个点在任意 lane 内
         for corner in corners:
             for lane in road.network.lanes_list():
@@ -98,6 +100,43 @@ class Env(gym.Wrapper):
                             (0 - margin <= longitudinal <= lane.length + margin):
                         return True
         return False
+
+    def get_road_width_info(self) -> dict:
+        """
+        获取道路宽度信息：
+        - 每个车道的宽度
+        - 每段并行道路的总宽度（按 start_node->end_node 分组）
+        - 整条道路的最大宽度
+        """
+        env = self.env.unwrapped
+        road = env.road
+        network = road.network
+
+        lane_widths = []
+        segment_groups = {}
+
+        for start_node, inner_dict in network.graph.items():
+            for end_node, lanes_list in inner_dict.items():  # ← lanes_list 是 list
+                for lane in lanes_list:  # ← 直接遍历 Lane 对象
+                    lane_widths.append(lane.width)
+
+                    key = (start_node, end_node)
+                    if key not in segment_groups:
+                        segment_groups[key] = []
+                    segment_groups[key].append(lane.width)
+
+        segment_widths = {
+            f"{start}->{end}": sum(widths)
+            for (start, end), widths in segment_groups.items()
+        }
+
+        max_road_width = max(segment_widths.values()) if segment_widths else 0.0
+
+        return {
+            'lane_widths': lane_widths,
+            'segment_widths': segment_widths,
+            'max_road_width': max_road_width
+        }
 
     def _vehicle_corners(self, cx, cy, length, width, heading):
         """计算车辆矩形的四个角点"""

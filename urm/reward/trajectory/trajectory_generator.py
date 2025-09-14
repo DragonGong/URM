@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import List, Optional
+from typing import List, Optional, Tuple, Dict
 
 from urm.config import Config
 from urm.reward.state.car_state import CarState
@@ -37,7 +37,7 @@ class TrajectoryGenerator:
         for i in reversed(range(0, len(edge.discrete_points))):
             risk = last_risk.get_value() * max(self.config.reward.discount_factor_max - edge.discrete_points[
                 i].velocity.magnitude / self.config.reward.velocity_unit, self.config.reward.discount_factor_min)
-            edge.discrete_points[i].risk.set_value(t=edge.discrete_points[i].get_time(), risk=risk,
+            edge.discrete_points[i].set_risk_value(t=edge.discrete_points[i].get_time(), risk=risk,
                                                    speed=edge.discrete_points[i].velocity.magnitude)
 
     def predict_collision_region(self):
@@ -85,7 +85,7 @@ class TrajectoryGenerator:
             tree.add_child(edge, child_tree)
         return tree
 
-    def traj_tree_cut(self, traj_tree: TrajTree) -> TrajTree:
+    def traj_tree_cut_1(self, traj_tree: TrajTree) -> TrajTree:
         """
         对轨迹树进行碰撞剪枝：
         - 遍历每条边，采样点调用 judge_collision
@@ -135,6 +135,80 @@ class TrajectoryGenerator:
             return TrajTree.from_node(deepcopy(traj_tree.root))
         return pruned_tree
 
+    def traj_tree_cut(self, traj_tree: TrajTree) -> TrajTree:
+        """
+        对轨迹树进行碰撞剪枝（修正版，保留引用一致性）：
+        - 返回剪枝后的新树（不修改原树）
+        """
+
+        def _prune_tree(tree: TrajTree) -> Optional[Tuple[TrajTree, Dict]]:
+            """
+            返回 (pruned_tree, mapping)
+            mapping: 原节点 -> 新节点（只包含这个子树中出现的原节点）
+            """
+            # 复制根节点并建立映射
+            new_root = deepcopy(tree.root)
+            mapping = {tree.root: new_root}
+
+            safe_children = []
+
+            for edge, child_tree in tree.iter_children():
+                # 采样并检测碰撞（使用原始 edge 的采样）
+                sampled_points: List[TrajNode] = edge.sample(num_points=10)
+                collision_detected = any(
+                    self.judge_conventional_collision(point.car_state)
+                    for point in sampled_points
+                )
+
+                if collision_detected:
+                    continue  # 该边碰撞，剪掉整条子树
+
+                # 递归剪枝子树，得到子树的新副本以及子映射
+                pruned_result = _prune_tree(child_tree)
+                if pruned_result is None:
+                    # 子树被完全剪掉
+                    continue
+
+                pruned_child_tree, child_mapping = pruned_result
+
+                # 合并映射：这样 mapping 中包含当前子树中所有已复制的节点
+                mapping.update(child_mapping)
+
+                # 复制边（深拷贝边对象），然后修正其 node 引用为新对象
+                new_edge = deepcopy(edge)
+
+                # 常见的可能保存节点引用的属性名（防御式处理）
+                candidate_attrs = ("node_begin", "node_end", "begin", "end", "from_node", "to_node")
+                for attr in candidate_attrs:
+                    if hasattr(new_edge, attr):
+                        val = getattr(new_edge, attr)
+                        # 如果该属性引用了原节点对象，将其替换为新节点引用
+                        if val in mapping:
+                            setattr(new_edge, attr, mapping[val])
+
+                # 兼容性保障：确保 node_begin/node_end 至少指向父/子新节点
+                # edge.node_begin 通常是 tree.root，edge.node_end 通常是 child_tree.root
+                if hasattr(edge, "node_begin") and edge.node_begin in mapping:
+                    new_edge.node_begin = mapping[edge.node_begin]
+                if hasattr(edge, "node_end") and edge.node_end in mapping:
+                    new_edge.node_end = mapping[edge.node_end]
+
+                # 将（新边，新子树）绑定保存
+                safe_children.append((new_edge, pruned_child_tree))
+
+            # 构造返回的新子树并返回映射
+            if len(safe_children) == 0:
+                return TrajTree.from_node(new_root), mapping
+            else:
+                return TrajTree(root=new_root, children=safe_children), mapping
+
+        result = _prune_tree(traj_tree)
+        if result is None:
+            # 全部被剪掉，返回仅含根节点的副本以保证不返回 None
+            return TrajTree.from_node(deepcopy(traj_tree.root))
+        pruned_tree, _ = result
+        return pruned_tree
+
     def set_risk_backpropagation(self, tree: TrajTree):
         root = tree.root
         if self.judge_surrounding_collision(root):
@@ -150,7 +224,7 @@ class TrajectoryGenerator:
                         collision = True
                         break
                 if collision:
-                    # todo：直接根据这个整条边是否被撞，然后来直接负值整条边的risk，不合理，需要更加精细化
+                    # todo：直接根据这个整条边是否被撞，然后来直接赋值整条边的risk，不合理，需要更加精细化
                     self.set_tree_risk_unification(tree.get_subtree_by_edge(edge), self.config.reward.risk_max_for_tree)
                 else:
                     self.set_risk_backpropagation(tree.get_subtree_by_edge(edge))
@@ -190,6 +264,6 @@ class TrajectoryGenerator:
         assert self.prediction_result is not None, "prediction result is None!"
         regions: [Region2D] = self.prediction_result[int(node.get_time()) - 1]
         for region in regions:
-            if region.contains(node.x, node.y):
+            if region.contains((node.x, node.y)):
                 return True
         return False

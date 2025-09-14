@@ -109,7 +109,7 @@ def train_model(config: Config):
     pprint.pprint(env.envs[0].unwrapped.config)
 
     print(f"\n🚀 Starting training with {algo_name}...")
-    model.learn(total_timesteps=config.training.total_timesteps)
+    model.learn(total_timesteps=config.training.total_timesteps,log_interval = 1)
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     model_filename = f"{timestamp}_{algo_name.lower()}_baseline_urm_highway"
