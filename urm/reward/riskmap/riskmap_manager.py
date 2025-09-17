@@ -3,6 +3,7 @@ from typing import Tuple
 
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 
 from urm.config import Config
 from urm.reward.riskmap.risk_map import RiskMap
@@ -26,8 +27,10 @@ class RiskMapManager:
         all_nodes = trajtree.get_all_nodes()
         coords = [self.world_to_local(n.x, n.y) for n in all_nodes]
         xs, ys = zip(*coords)
-        x_min, x_max = min(xs), max(xs)
-        y_min, y_max = min(ys), max(ys)
+
+        vehicle_size = root.car_state.vehicle_size
+        x_min, x_max = min(xs) - vehicle_size.length, max(xs) + vehicle_size.length
+        y_min, y_max = min(ys) - vehicle_size.width, max(ys) + vehicle_size.width
 
         assert self.step_num != 0, "step_num is 0"
         self.maps = [RiskMap(x_min, x_max, y_min, y_max, self.cell_size)
@@ -38,6 +41,9 @@ class RiskMapManager:
         return np.dot(delta, self.e_x), np.dot(delta, self.e_y)
 
     def assign_risk(self):
+        """
+        将 trajtree上的点映射到riskmap上
+        """
         # 遍历所有节点，按时间步分类
         for node in self.trajtree.get_all_nodes_with_edge_nodes():
             if node.risk is None:
@@ -49,17 +55,76 @@ class RiskMapManager:
                     x, y = self.world_to_local(node.x, node.y)
                     self.maps[t].add_point(x, y, risk_value)
 
-    def plot_all(self, figsize_per_map: Tuple[float, float] = (6, 6), cmap='hot'):
-        n = self.step_num
-        fig, axes = plt.subplots(1, n, figsize=(figsize_per_map[0] * n, figsize_per_map[1]))
-        if n == 1:
-            axes = [axes]
-        for i, (ax, rm) in enumerate(zip(axes, self.maps)):
-            rm.plot(ax=ax,
-                    title=f"RiskMap t_idx={i} (t ∈ [{i * self.duration:.2f},{(i + 1) * self.duration:.2f})s)",
-                    show_colorbar=True, cmap=cmap)
+    def assign_risk_with_vehicle(self):
+        for node in self.trajtree.get_all_nodes_with_edge_nodes():
+            if node.risk is None:
+                continue
+            t = get_interval_index(node.get_time(), self.duration, self.step_num)
+            if 0 <= t < self.step_num:
+                risk_value = node.risk.get_value()
+                if risk_value is not None:
+                    corners = node.car_state.get_bounding_box_corners()
+                    local_corners = []
+                    for point in corners:
+                        local_corners.append(self.world_to_local(*point))
+                    self.maps[t].add_rectangle(local_corners, risk_value)
+
+    def plot_all(self):
+        """
+        将所有的RiskMap绘制在一个大窗口中，形成多个小图的情景。
+        """
+        # 根据maps的数量决定subplot的布局
+        n = len(self.maps)
+        cols = math.ceil(math.sqrt(n))  # 列数
+        rows = math.ceil(n / cols)      # 行数
+
+        # 创建大窗口和子图
+        fig, axes = plt.subplots(rows, cols, figsize=(cols*4, rows*3))
+        axes = axes.ravel() if n > 1 else [axes]  # 如果只有一个子图，确保axes是一个列表
+
+        for idx, risk_map in enumerate(self.maps):
+            ax = axes[idx]
+            risk_avg = risk_map.finalize()
+            mask = (risk_map.count > 0)
+
+            # 创建绿 -> 红的 colormap
+            cmap = LinearSegmentedColormap.from_list(
+                'green_to_red',
+                [
+                    (0.0, (0, 1, 0)),  # Green
+                    (0.25, (1, 1, 0)),  # Yellow
+                    (0.5, (1, 0.647, 0)),  # Orange
+                    (0.75, (1, 0.27, 0)),  # Orange-red
+                    (1.0, (1, 0, 0))  # Red
+                ],
+                N=256
+            )
+
+            # 将未覆盖区域（count=0）设为 NaN
+            risk_display = np.where(mask, risk_avg, np.nan)
+
+            extent = (float(risk_map.x_min), float(risk_map.x_max), float(risk_map.y_min), float(risk_map.y_max))
+
+            # 绘制图像
+            cax = ax.imshow(risk_display, origin='lower', extent=extent, cmap=cmap,
+                            vmin=0.0, vmax=1.0, interpolation='nearest', aspect='auto')
+
+            ax.set_title(f"Time step {idx}")
+            ax.set_xlabel("local x (m)")
+            ax.set_ylabel("local y (m)")
+            ax.set_aspect('equal', 'box')  # 保持纵横比
+
+            # 添加colorbar到每个子图
+            plt.colorbar(cax, ax=ax, label="Risk Level (0=Green, 1=Red)")
+
+        # 隐藏多余的子图
+        for idx in range(n, len(axes)):
+            fig.delaxes(axes[idx])
+
         plt.tight_layout()
-        plt.show()
+        plt.show(block=True)
+
+
 
     def sum_all(self) -> 'RiskMap':
         """

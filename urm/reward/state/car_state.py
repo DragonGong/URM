@@ -1,4 +1,6 @@
+import math
 from copy import deepcopy
+from typing import List, Tuple
 
 from urm.reward.state.state import State
 from urm.reward.state.utils.position import Position
@@ -92,3 +94,40 @@ class CarState(State):
     @classmethod
     def from_position(cls, position: Position):
         return cls(position.x, position.y)
+
+    def get_bounding_box_corners(self) -> List[Tuple[float, float]]:
+        """
+        计算车辆当前时刻的矩形包围盒四个角的世界坐标。
+        顺序：前右 -> 前左 -> 后左 -> 后右  顺时针
+
+        Returns:
+            List[Tuple[float, float]]: 四个角的 (x, y) 坐标列表
+        """
+        x = self._position.x
+        y = self._position.y
+        vx = self.velocity.vx
+        vy = self.velocity.vy
+        L = self._vehicle_size.length
+        W = self._vehicle_size.width
+
+        # 计算航向角（基于速度方向）
+        yaw = math.atan2(vy, vx)
+
+        # 车体坐标系下的四个角（中心为原点，x轴向前）
+        front_right = (L / 2, W / 2)
+        front_left = (L / 2, -W / 2)
+        rear_left = (-L / 2, -W / 2)
+        rear_right = (-L / 2, W / 2)
+        corners = [front_right, front_left, rear_left, rear_right]
+
+        # 旋转 + 平移 到世界坐标
+        cos_yaw = math.cos(yaw)
+        sin_yaw = math.sin(yaw)
+
+        world_corners = []
+        for cx, cy in corners:
+            wx = x + cos_yaw * cx - sin_yaw * cy
+            wy = y + sin_yaw * cx + cos_yaw * cy
+            world_corners.append((wx, wy))
+
+        return world_corners

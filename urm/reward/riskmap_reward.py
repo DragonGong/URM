@@ -29,6 +29,7 @@ class RiskMapReward(RewardMeta):
 
     def reward(self, ego_state: EgoState, surrounding_states: SurroundingState, env_condition: EnvInterface,
                baseline_reward):
+        print(f"baseline reward is {baseline_reward}")
         if self.riskmap_manager is None:
             urm_risk = baseline_reward
         else:
@@ -36,15 +37,20 @@ class RiskMapReward(RewardMeta):
             if self.visualizer is not None:
                 vis_data = riskmap_total.get_visualization_data()
                 self.visualizer.update(vis_data)
-            # riskmap_total.plot()
-            custom_risk = riskmap_total.get_risk_for_car(ego_state, self.riskmap_manager.world_to_local)
+            self.riskmap_manager.plot_all()
+            # riskmap_total.plot_promax((ego_state.vehicle_size.length, ego_state.vehicle_size.width))
+            riskmap_total.plot_pro(finalize=False)
+            custom = riskmap_total.get_risk_for_car(ego_state, self.riskmap_manager.world_to_local)
             urm_risk = self.urm_risk(
-                custom_risk=custom_risk,
+                custom_risk=custom,
                 baseline=baseline_reward)
-            print(f"custom_risk is{custom_risk}")
+            print(f"custom_risk is {custom}")
         self.riskmap_manager_create(ego_state=ego_state, surrounding_states=surrounding_states,
                                     env_condition=env_condition)
         return urm_risk
+
+    def urm_risk_magnify(self, custom_risk, baseline):
+        return
 
     def urm_risk(self, custom_risk, baseline):
         return self.config.reward.baseline_reward_w * baseline + (
@@ -63,4 +69,4 @@ class RiskMapReward(RewardMeta):
         if self.visualizer is not None:
             traj.visualize()
         self.riskmap_manager = RiskMapManager(config=self.config.reward, trajtree=traj)
-        self.riskmap_manager.assign_risk()
+        self.riskmap_manager.assign_risk_with_vehicle()
