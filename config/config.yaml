@@ -70,7 +70,7 @@ reward:
     behaviors_list: [ "lateral_left","lateral_right","soft_accel","hard_accel","soft_decel","hard_decel" ]
 
   riskmap_config:
-    cell_size: 1
+    cell_size: 3
 
   # 可视化配置（riskmap)
   visualize: false # 是否创建可视化工具实例
