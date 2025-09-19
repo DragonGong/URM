@@ -39,7 +39,7 @@ class RiskMapReward(RewardMeta):
                 self.visualizer.update(vis_data)
             self.riskmap_manager.plot_all()
             # riskmap_total.plot_promax((ego_state.vehicle_size.length, ego_state.vehicle_size.width))
-            riskmap_total.plot_pro(finalize=False)
+            riskmap_total.plot_pro()
             custom = riskmap_total.get_risk_for_car(ego_state, self.riskmap_manager.world_to_local)
             urm_risk = self.urm_risk(
                 custom_risk=custom,

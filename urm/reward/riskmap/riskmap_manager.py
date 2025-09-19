@@ -129,7 +129,7 @@ class RiskMapManager:
     def sum_all(self) -> 'RiskMap':
         """
         将所有时间片的 RiskMap 累加，返回一个新的 RiskMap 对象
-        （risk_sum 和 count 逐元素相加，最后可再 finalize 或直接 plot）。
+        risk_sum 和 count 逐元素相加
         """
         if not self.maps:
             raise ValueError("没有风险图可累加")
@@ -143,8 +143,6 @@ class RiskMapManager:
             new_map.risk_sum += rm.risk_sum
             new_map.count += rm.count
 
-        avg_risk = new_map.finalize()
-        new_map.risk_sum = avg_risk
         return new_map
 
 
