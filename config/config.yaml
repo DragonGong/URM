@@ -68,6 +68,7 @@ reward:
 
   behavior_configs:
     behaviors_list: [ "lateral_left","lateral_right","soft_accel","hard_accel","soft_decel","hard_decel" ]
+#    behaviors_list: [ "lateral_left","lateral_right" ,"cruise"]
 
   riskmap_config:
     cell_size: 3

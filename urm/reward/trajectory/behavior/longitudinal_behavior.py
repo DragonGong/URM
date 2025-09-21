@@ -24,7 +24,7 @@ class LongitudinalBehavior(Behavior):
     def target_velocity(self, root_velocity: float, state: State) -> float:
         raise NotImplementedError
 
-
+@BehaviorFactory.register("cruise")
 class LongitudinalCruise(LongitudinalBehavior):
     def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
         super().__init__(config, **kwargs)
