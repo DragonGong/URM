@@ -29,7 +29,7 @@ class RiskMapReward(RewardMeta):
             self.visualizer = None
 
     def reward(self, ego_state: EgoState, surrounding_states: SurroundingState, env_condition: EnvInterface,
-               baseline_reward):
+               baseline_reward,action):
         print(f"baseline reward is {baseline_reward}")
         if self.riskmap_manager is None:
             urm_risk = baseline_reward

@@ -2,7 +2,7 @@ import gymnasium as gym
 import highway_env
 
 # 创建环境
-env = gym.make('highway-v0')
+env = gym.make("intersection-v1")
 
 # 重置环境（必须，否则 action_type 可能未初始化）
 env.reset()
