@@ -150,3 +150,32 @@ class CarState(State):
             world_corners.append((wx, wy))
 
         return world_corners
+
+    def __deepcopy__(self, memo):
+        # 避免重复复制
+        if id(self) in memo:
+            return memo[id(self)]
+
+        # 创建新实例（不调用 __init__，避免重新绑定 env 或计算 frenet）
+        cls = self.__class__
+        new_obj = cls.__new__(cls)
+
+        # 注册到 memo，防止递归复制
+        memo[id(self)] = new_obj
+
+        # 浅拷贝 env（保持引用）
+        new_obj.env_condition = self.env_condition
+
+        # 深拷贝内部状态对象
+        new_obj._position = deepcopy(self._position, memo)
+        new_obj._velocity = deepcopy(self._velocity, memo)
+        new_obj._vehicle_size = deepcopy(self._vehicle_size, memo)
+
+        # 如果父类 State 有其他属性，也复制（可选）
+        # 注意：super().__init__ 不在这里调用！
+        # 如果 State 有其他属性，手动复制：
+        for k, v in self.__dict__.items():
+            if k not in ['env_condition', '_position', '_velocity', '_vehicle_size']:
+                setattr(new_obj, k, deepcopy(v, memo))
+
+        return new_obj

@@ -9,8 +9,9 @@ from urm.reward.trajectory.traj import TrajEdge, TrajNode
 
 from urm.config import Config
 from urm.reward.state.utils.velocity import Velocity
-from ...state.car_state import CarState
-from ...state.interface import EnvInterface
+from urm.reward.state.car_state import CarState
+from urm.reward.state.ego_state import EgoState
+from urm.reward.state.interface import EnvInterface
 
 
 @register_fitting(ModelName.Polynomial)

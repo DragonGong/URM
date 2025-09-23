@@ -79,7 +79,7 @@ class LateralLeft(LateralBehavior):
         return target_car_state
 
     def target_offset(self, root_offset: float, state: State) -> float:
-        return root_offset - (0.3 if state.velocity.magnitude < 5 else 0.5)
+        return root_offset - (2 if state.velocity.magnitude < 5 else 4)
 
 
 @BehaviorFactory.register(BehaviorName.LATERAL_RIGHT)
@@ -120,4 +120,4 @@ class LateralRight(LateralBehavior):
         return target_car_state
 
     def target_offset(self, root_offset: float, state: State) -> float:
-        return root_offset + (0.3 if state.velocity.magnitude < 5 else 0.5)
+        return root_offset + (2 if state.velocity.magnitude < 5 else 4)

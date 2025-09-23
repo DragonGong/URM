@@ -14,7 +14,7 @@ class TrajNode(Position):
         self.risk: Optional[Risk] = kwargs.get('risk', None)
         self._time: float = 0  # 建树的时候就会赋值
         self.velocity: Optional[Velocity] = kwargs.get('velocity', None)
-        self._car_state: Optional[CarState] = kwargs.get('velocity', None)
+        self._car_state: Optional[CarState] = kwargs.get('car_state', None)
 
     def get_time(self) -> float:
         return self._time
@@ -24,15 +24,8 @@ class TrajNode(Position):
 
     @property
     def car_state(self) -> CarState:
-        if self._car_state is None:
-            if self.velocity is None:
-                return CarState.from_position(self)
-            else:
-                cls = CarState.from_position(self)
-                cls.set_velocity(self.velocity.xy)
-                return cls
-        else:
-            return self._car_state
+        assert self._car_state is not None, "cat_state is fucking None!"
+        return self._car_state
 
     def set_car_state(self, car_state: CarState):
         self._car_state = car_state

@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from urm.reward.state.car_state import CarState
 
 
