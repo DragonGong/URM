@@ -155,7 +155,245 @@ class Env(gym.Wrapper):
         ])
         return [tuple(rot @ c + np.array([cx, cy])) for c in corners]
 
+    def world_to_lane_local(
+            self,
+            x: float,
+            y: float,
+            lane_id: Tuple[str, str, int]
+    ) -> Tuple[float, float]:
+        """
+        将世界坐标 (x, y) 转换为指定车道 lane_id 上的局部坐标 (longitudinal, lateral)
 
-if __name__ == "__main__":
-    env = Env(gym.make("highway-fast-v0"))
-    print(isinstance(env, EnvInterface))  # → True ✅
+        Args:
+            x (float): 世界坐标 x
+            y (float): 世界坐标 y
+            lane_id (Tuple[str, str, int]): 车道索引，如 ('a', 'b', 0)
+
+        Returns:
+            Tuple[float, float]: (longitudinal, lateral) —— 沿车道距离 & 横向偏移
+
+        Raises:
+            ValueError: 如果 lane_id 不存在
+        """
+        env = self.env.unwrapped
+        road = env.road
+        network = road.network
+
+        try:
+            lane = network.get_lane(lane_id)
+        except KeyError:
+            raise ValueError(f"车道 {lane_id} 不存在于路网中")
+
+        position = np.array([x, y])
+        longitudinal, lateral = lane.local_coordinates(position)
+
+        return float(longitudinal), float(lateral)
+
+    def lane_local_to_world(
+            self,
+            lane_id: Tuple[str, str, int],
+            longitudinal: float,
+            lateral: float
+    ) -> Tuple[float, float]:
+        """
+        将指定车道上的局部坐标 (longitudinal, lateral) 转换为世界坐标 (x, y)
+
+        Args:
+            lane_id (Tuple[str, str, int]): 车道索引，如 ('a', 'b', 0)
+            longitudinal (float): 沿车道中心线的弧长距离
+            lateral (float): 相对于车道中心线的横向偏移
+
+        Returns:
+            Tuple[float, float]: (x, y) —— 世界坐标
+
+        Raises:
+            ValueError: 如果 lane_id 不存在
+        """
+        env = self.env.unwrapped
+        road = env.road
+        network = road.network
+
+        try:
+            lane = network.get_lane(lane_id)
+        except KeyError:
+            raise ValueError(f"车道 {lane_id} 不存在于路网中")
+
+        world_position = lane.position(longitudinal, lateral)
+        return float(world_position[0]), float(world_position[1])
+
+    def get_current_road_segment(
+            self,
+            x: float,
+            y: float,
+            return_lane_id: bool = False
+    ) -> Union[Tuple[str, str], Tuple[str, str, Tuple[str, str, int]]]:
+
+        """
+        根据世界坐标 (x, y) 获取当前所在路段的起始节点和终止节点字符串
+
+        Args:
+            x (float): 世界坐标 x
+            y (float): 世界坐标 y
+            return_lane_id (bool): 是否同时返回对应的 lane_id
+
+        Returns:
+            如果 return_lane_id=False → (start_node: str, end_node: str)
+            如果 return_lane_id=True  → (start_node: str, end_node: str, lane_id: Tuple[str, str, int])
+
+        Raises:
+            ValueError: 如果找不到任何车道（如车辆已飞出地图）
+        """
+        env = self.env.unwrapped
+        network = env.road.network
+        position = np.array([x, y])
+
+        closest_lane = None
+        min_distance = float('inf')
+        best_lane_id = None
+
+        # 遍历所有车道，找距离 (x,y) 最近的那条
+        for start_node in network.graph:
+            for end_node in network.graph[start_node]:
+                for idx, lane in enumerate(network.graph[start_node][end_node]):
+                    # 计算点到车道中心线的横向距离（绝对值）
+                    longitudinal, lateral = lane.local_coordinates(position)
+                    distance = abs(lateral)  # 横向距离作为“接近度”指标
+
+                    # 可选：也可用欧氏距离到车道起点/终点/投影点，但横向距离更符合“在车道上”的语义
+                    if distance < min_distance:
+                        min_distance = distance
+                        closest_lane = lane
+                        best_lane_id = (start_node, end_node, idx)
+
+        if closest_lane is None:
+            raise ValueError(f"在位置 ({x}, {y}) 未找到任何车道 —— 车辆可能已离开道路或环境路网为空")
+
+        start_node, end_node, _ = best_lane_id
+
+        if return_lane_id:
+            return start_node, end_node, best_lane_id
+        else:
+            return start_node, end_node
+
+    def get_frenet_velocity(self, x: float, y: float, vx: float, vy: float) -> Tuple[float, float]:
+        """
+        根据世界坐标 (x, y) 和速度 (vx, vy)，计算当前车道坐标系下的纵向和横向速度。
+
+        返回: (v_lon, v_lat)
+            - v_lon: 沿车道方向的速度（正 = 前进方向）
+            - v_lat: 垂直于车道方向的速度（正 = 向左 / 车道中心线左侧）
+        """
+        env = self.env.unwrapped
+        network = env.road.network
+        position = np.array([x, y])
+        velocity = np.array([vx, vy])
+
+        # Step 1: 找到最近的车道
+        closest_lane = None
+        min_lateral = float('inf')
+        best_lane_id = None
+
+        for start_node in network.graph:
+            for end_node in network.graph[start_node]:
+                for idx, lane in enumerate(network.graph[start_node][end_node]):
+                    longitudinal, lateral = lane.local_coordinates(position)
+                    if abs(lateral) < abs(min_lateral):
+                        min_lateral = lateral
+                        closest_lane = lane
+                        best_lane_id = (start_node, end_node, idx)
+
+        if closest_lane is None:
+            raise ValueError(f"在位置 ({x}, {y}) 未找到任何车道")
+
+        # Step 2: 计算车道在该点的切向量（单位向量，指向车道前进方向）
+        # 方法：取 s 和 s+ds 两点，差分得切向量
+        longitudinal, lateral = closest_lane.local_coordinates(position)
+        ds = 0.1  # 微小步长
+        s1 = longitudinal
+        s2 = longitudinal + ds
+
+        # 获取两个点的世界坐标（保持 d = lateral 不变，沿车道中心线微移）
+        p1 = closest_lane.position(s1, lateral)
+        p2 = closest_lane.position(s2, lateral)
+
+        tangent_vector = np.array(p2) - np.array(p1)
+        tangent_norm = np.linalg.norm(tangent_vector)
+
+        if tangent_norm < 1e-6:
+            # 避免除零，使用默认方向（如x轴）
+            tangent_unit = np.array([1.0, 0.0])
+        else:
+            tangent_unit = tangent_vector / tangent_norm
+
+        # Step 3: 计算法向量（垂直于切向，指向左侧为正）
+        # 2D 旋转90度： (x, y) -> (-y, x) 是逆时针90度（左手法则，指向左侧）
+        normal_unit = np.array([-tangent_unit[1], tangent_unit[0]])
+
+        # Step 4: 投影速度到切向和法向
+        v_lon = np.dot(velocity, tangent_unit)  # 纵向速度
+        v_lat = np.dot(velocity, normal_unit)  # 横向速度（正 = 向左）
+
+        return v_lon, v_lat
+
+    def frenet_velocity_to_cartesian(
+            self,
+            x: float,
+            y: float,
+            v_lon: float,
+            v_lat: float
+    ) -> tuple[np.ndarray[tuple[int, ...], Any], np.ndarray[tuple[int, ...], Any]]:
+        """
+        将 Frenet 坐标系下的速度 (v_lon, v_lat) 转换为笛卡尔坐标系下的速度 (vx, vy)
+
+        Args:
+            x, y: 车辆当前世界坐标（用于定位所在车道及方向）
+            v_lon: 沿车道方向的速度（正 = 前进）
+            v_lat: 垂直于车道方向的速度（正 = 向左）
+
+        Returns:
+            (vx, vy): 世界坐标系下的速度矢量
+        """
+        env = self.env.unwrapped
+        network = env.road.network
+        position = np.array([x, y])
+
+        # Step 1: 找到最近的车道
+        closest_lane = None
+        min_lateral = float('inf')
+
+        for start_node in network.graph:
+            for end_node in network.graph[start_node]:
+                for idx, lane in enumerate(network.graph[start_node][end_node]):
+                    longitudinal, lateral = lane.local_coordinates(position)
+                    if abs(lateral) < abs(min_lateral):
+                        min_lateral = lateral
+                        closest_lane = lane
+
+        if closest_lane is None:
+            raise ValueError(f"在位置 ({x}, {y}) 未找到任何车道")
+
+        # Step 2: 计算切向量
+        longitudinal, lateral = closest_lane.local_coordinates(position)
+        ds = 0.1
+        p1 = closest_lane.position(longitudinal, lateral)
+        p2 = closest_lane.position(longitudinal + ds, lateral)
+
+        tangent_vector = np.array(p2) - np.array(p1)
+        tangent_norm = np.linalg.norm(tangent_vector)
+
+        if tangent_norm < 1e-6:
+            tangent_unit = np.array([1.0, 0.0])
+        else:
+            tangent_unit = tangent_vector / tangent_norm
+
+        # Step 3: 计算法向量（指向左侧）
+        normal_unit = np.array([-tangent_unit[1], tangent_unit[0]])
+
+        # Step 4: 合成笛卡尔速度
+        velocity_cartesian = v_lon * tangent_unit + v_lat * normal_unit
+        vx, vy = velocity_cartesian[0], velocity_cartesian[1]
+
+        return vx, vy
+
+
+

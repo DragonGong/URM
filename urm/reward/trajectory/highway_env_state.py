@@ -23,6 +23,7 @@ class HighwayState:
         self.orientation = vehicle.heading  # 朝向
         self.time_step = time_step
         self.duration = duration
+        self.env = None
 
     @classmethod
     def from_carstate(cls, car_state: CarState, duration: int, time_step=3):
@@ -33,4 +34,5 @@ class HighwayState:
         instance.orientation = np.arctan2(car_state.vy, car_state.vx)
         instance.time_step = time_step
         instance.duration = duration
+        instance.env = car_state.env_condition
         return instance

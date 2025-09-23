@@ -8,6 +8,7 @@ from urm.reward.trajectory.highway_env_state import HighwayState as State
 from .behavior_factory import BehaviorFactory
 
 from .behaviors import Behavior
+from .constant import BehaviorName
 
 
 class LongitudinalBehavior(Behavior):
@@ -24,7 +25,8 @@ class LongitudinalBehavior(Behavior):
     def target_velocity(self, root_velocity: float, state: State) -> float:
         raise NotImplementedError
 
-@BehaviorFactory.register("cruise")
+
+@BehaviorFactory.register(BehaviorName.CRUISE)
 class LongitudinalCruise(LongitudinalBehavior):
     def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
         super().__init__(config, **kwargs)
@@ -49,10 +51,10 @@ class LongitudinalCruise(LongitudinalBehavior):
         return target_car_state
 
     def target_velocity(self, root_velocity: float, state: State) -> float:
-        return state.velocity
+        return root_velocity
 
 
-@BehaviorFactory.register("soft_accel")
+@BehaviorFactory.register(BehaviorName.SOFT_ACCEL)
 class SoftAcceleration(LongitudinalBehavior):
     def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
         super().__init__(config, **kwargs)
@@ -94,10 +96,10 @@ class SoftAcceleration(LongitudinalBehavior):
         return target_car_state
 
     def target_velocity(self, root_velocity: float, state: State) -> float:
-        return min(state.velocity + 2.5, 50.0)
+        return min(root_velocity + 2.5, 50.0)
 
 
-@BehaviorFactory.register("hard_accel")
+@BehaviorFactory.register(BehaviorName.HARD_ACCEL)
 class HardAcceleration(LongitudinalBehavior):
     def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
         super().__init__(config, **kwargs)
@@ -139,10 +141,10 @@ class HardAcceleration(LongitudinalBehavior):
         return target_car_state
 
     def target_velocity(self, root_velocity: float, state: State) -> float:
-        return min(state.velocity + 5.0, 50.0)
+        return min(root_velocity + 5.0, 50.0)
 
 
-@BehaviorFactory.register("soft_decel")
+@BehaviorFactory.register(BehaviorName.SOFT_DECEL)
 class SoftDeceleration(LongitudinalBehavior):
     def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
         super().__init__(config, **kwargs)
@@ -183,10 +185,10 @@ class SoftDeceleration(LongitudinalBehavior):
         )
 
     def target_velocity(self, root_velocity: float, state: State) -> float:
-        return max(state.velocity - 3.0, 0.01)
+        return max(root_velocity - 3.0, 0.01)
 
 
-@BehaviorFactory.register("hard_decel")
+@BehaviorFactory.register(BehaviorName.HARD_DECEL)
 class HardDeceleration(LongitudinalBehavior):
     def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
         super().__init__(config, **kwargs)
@@ -227,4 +229,4 @@ class HardDeceleration(LongitudinalBehavior):
         )
 
     def target_velocity(self, root_velocity: float, state: State) -> float:
-        return max(state.velocity - 10.0, 0.01)
+        return max(root_velocity - 10.0, 0.01)

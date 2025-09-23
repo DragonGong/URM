@@ -21,7 +21,8 @@ class RiskMapReward(RewardMeta):
         self.riskmap_manager: Optional[RiskMapManager] = None
         self.behavior_factory = BehaviorFactory(config.reward.behavior_configs)
         self.prediction_model = create_model_from_config(self.config)
-        self.behaviors = self.behavior_factory.get_all_behaviors_by_config()
+        # self.behaviors = self.behavior_factory.get_all_behaviors_by_config()
+        self.behaviors = self.behavior_factory.get_all_scenarios_as_combinations()
         if self.config.reward.visualize:
             self.visualizer = RiskMapVisualizer(title="Training RiskMap", plt_show=config.reward.plt_show)
         else:

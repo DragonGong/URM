@@ -2,8 +2,8 @@ from urm.reward.state.car_state import CarState
 
 
 class EgoState(CarState):
-    def __init__(self, x=0.0, y=0.0, vx=0.0, vy=0.0, **kwargs):
-        super().__init__(x=x, y=y, vx=vx, vy=vy, **kwargs)
+    def __init__(self, env, x=0.0, y=0.0, vx=0.0, vy=0.0, **kwargs):
+        super().__init__(env=env, x=x, y=y, vx=vx, vy=vy, **kwargs)
 
     @classmethod
     def from_vehicle(cls, vehicle, **kwargs):

@@ -18,8 +18,11 @@ class RiskMapEnv(Env):
             self.env.render()
         env = self.env.unwrapped
 
-        ego_state = EgoState.from_vehicle(env.vehicle, env=env)
+        ego_state = EgoState.from_vehicle(env.vehicle, env=self)
         surrounding_state = SurroundingState.from_road_vehicles(road_vehicles=env.road.vehicles,
-                                                                exclude_vehicle=env.vehicle, env=env)
+                                                                exclude_vehicle=env.vehicle, env=self)
         reward = self.reward.reward(ego_state, surrounding_state, self, base_line_reward)
         return obs, reward, terminated, truncated, info
+
+# def get_behavior_by_action(action):
+#     return

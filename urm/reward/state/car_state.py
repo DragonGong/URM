@@ -9,15 +9,19 @@ from urm.reward.state.utils.velocity import Velocity
 
 
 class CarState(State):
-    def __init__(self, x=0.0, y=0.0, vx=0.0, vy=0.0, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, env, x=0.0, y=0.0, vx=0.0, vy=0.0, **kwargs):
+        super().__init__(env, **kwargs)
         # 内部使用封装类
         self._position = Position(x, y)
+        self._position.calculate_frenet(self.env_condition)
         self._velocity = Velocity(vx, vy)
 
         self._vehicle_size = VehicleSize()
 
     # ========== 保持外部接口不变 ==========
+
+    def set_frenet_velocity(self):
+        self._velocity.set_frenet(self.env_condition, self._position.x, self._position.y)
 
     @property
     def vehicle_size(self) -> VehicleSize:
@@ -58,6 +62,21 @@ class CarState(State):
     @vy.setter
     def vy(self, value):
         self._velocity.vy = value
+
+    @property
+    def longitudinal(self):
+        assert self._position.calculated_frenet, "frenet is not calculated"
+        return self._position.longitudinal
+
+    @property
+    def lateral(self):
+        assert self._position.calculated_frenet, "frenet is not calculated"
+        return self._position.lateral
+
+    @property
+    def lane_id(self):
+        assert self._position.calculated_frenet, "frenet is not calculated"
+        return self._position.lane_id
 
     # ========== 方法保持行为一致 ==========
 

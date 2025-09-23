@@ -1,3 +1,6 @@
+from typing import List, Dict
+
+
 class Config:
     class EnvConfig:
         def __init__(self, **kwargs):
@@ -70,9 +73,32 @@ class Config:
             def __init__(self, **kwargs):
                 self.linear_model_config = self.LinearModelConfig(**kwargs.get("linear_model_config", {}))
 
+        class BehaviorSequenceConfig:
+            """单个时间步的行为配置"""
+
+            def __init__(self, lateral: str, longitudinal: str):
+                self.lateral = lateral
+                self.longitudinal = longitudinal
+
+        class ScenarioConfig:
+            """一个完整场景的行为序列配置"""
+
+            def __init__(self, name: str, description: str, sequence: List[Dict[str, str]]):
+                self.name = name
+                self.description = description
+                self.sequence = [
+                    Config.RewardConfig.BehaviorSequenceConfig(**step)
+                    for step in sequence
+                ]
+
         class BehaviorConfigs:
             def __init__(self, **kwargs):
                 self.behavior_configs = kwargs.get("behaviors_list", [])
+                scenarios = kwargs.get("scenarios", [])
+                self.scenarios = [
+                    Config.RewardConfig.ScenarioConfig(**scenario)
+                    for scenario in scenarios
+                ]
 
         class RiskMapConfig:
             def __init__(self, **kwargs):
