@@ -377,28 +377,9 @@ class Env(gym.Wrapper):
         Returns:
             (vx, vy): 世界坐标系下的速度矢量
         """
-        # env = self.env.unwrapped
-        # network = env.road.network
+
         position = np.array([x, y])
-        # todo: delete the note
-        # if lane_id is None:
-        #     # Step 1: 找到最近的车道
-        #     closest_lane = None
-        #     min_lateral = float('inf')
-        #
-        #     for start_node in network.graph:
-        #         for end_node in network.graph[start_node]:
-        #             for idx, lane in enumerate(network.graph[start_node][end_node]):
-        #                 longitudinal, lateral = lane.local_coordinates(position)
-        #                 if abs(lateral) < abs(min_lateral):
-        #                     min_lateral = lateral
-        #                     closest_lane = lane
-        #
-        #     if closest_lane is None:
-        #         raise ValueError(f"在位置 ({x}, {y}) 未找到任何车道")
-        #     right_lane = closest_lane
-        # else:
-        #     right_lane = self.get_lane_by_id(lane_id)
+
         right_lane = self.get_lane_by_id(lane_id)
         # Step 2: 计算切向量
         longitudinal, lateral = right_lane.local_coordinates(position)
