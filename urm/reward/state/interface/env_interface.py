@@ -1,4 +1,4 @@
-from typing import Protocol, Any, Tuple, Union, runtime_checkable
+from typing import Protocol, Any, Tuple, Union, runtime_checkable, Optional
 import numpy as np
 
 
@@ -44,7 +44,9 @@ class EnvInterface(Protocol):
     ) -> Union[Tuple[str, str], Tuple[str, str, Tuple[str, str, int]]]:
         ...
 
-    def get_frenet_velocity(self, x: float, y: float, vx: float, vy: float) -> Tuple[float, float]:
+    def get_frenet_velocity(self, x: float, y: float, vx: float, vy: float,
+                            land_id: Optional[Tuple[str, str, int]] = None) -> Tuple[
+        float, float, Tuple[str, str, int]]:
         ...
 
     def frenet_velocity_to_cartesian(
@@ -52,6 +54,10 @@ class EnvInterface(Protocol):
             x: float,
             y: float,
             v_lon: float,
-            v_lat: float
+            v_lat: float,
+            lane_id: Tuple[str, str, int],
     ) -> tuple[np.ndarray[tuple[int, ...], Any], np.ndarray[tuple[int, ...], Any]]:
+        ...
+
+    def get_lane_by_id(self, lane_id: Tuple[str, str, int]):
         ...

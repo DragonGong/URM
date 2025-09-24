@@ -40,7 +40,8 @@ class BehavioralCombination(Behavior):
         # 预测的轨迹点的速度，都是沿着车道方向的，垂直于车道方向的速度全部归零
         v_lat_ultimately = 0.0
 
-        vx, vy = state.env.frenet_velocity_to_cartesian(x=x, y=y, v_lon=v_lon_ultimately, v_lat=v_lat_ultimately)
+        vx, vy = state.env.frenet_velocity_to_cartesian(x=x, y=y, v_lon=v_lon_ultimately, v_lat=v_lat_ultimately,
+                                                        lane_id=initial_position.lane_id)
 
         car_state = CarState(x=x, y=y, vx=vx, vy=vy, env=state.env)
         car_state.set_frenet_velocity()

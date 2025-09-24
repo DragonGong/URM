@@ -11,9 +11,10 @@ class Velocity:
         self.calculated_frenet = False
         self.v_lot = 0.0
         self.v_lat = 0.0
+        self.land_id = None
 
     def set_frenet(self, env: EnvInterface, x: float, y: float):
-        self.v_lot, self.v_lat = env.get_frenet_velocity(x, y, self.vx, self.vy)
+        self.v_lot, self.v_lat, self.land_id = env.get_frenet_velocity(x, y, self.vx, self.vy)
         self.calculated_frenet = True
 
     @property

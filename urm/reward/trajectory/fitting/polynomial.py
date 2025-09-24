@@ -225,16 +225,17 @@ class Polynomial(Fitting):
             raise ValueError(f"无法获取车道ID: {e}")
 
         # 如果起终点车道不同，我们统一使用起点车道（或可插值，这里简化）
-        lane_id = lane_id_begin  # 也可根据策略选择中间车道，此处简化
+        lane_id = lane_id_begin  # Notice：下面全部都是基于这个lane id来算
 
         # 获取 Frenet 坐标 (s, d)
         s0, d0 = env.world_to_lane_local(float(p0[0]), float(p0[1]), lane_id)
         sf, df = env.world_to_lane_local(float(pf[0]), float(pf[1]), lane_id)
 
-        # 获取 Frenet 速度（vs0, vd0）和（vsf, vdf）
-        vs0, vd0 = env.get_frenet_velocity(float(p0[0]), float(p0[1]), float(v0_vec[0]), float(v0_vec[1]))
-        vsf, vdf = env.get_frenet_velocity(float(pf[0]), float(pf[1]), float(vf_vec[0]),
-                                           float(vf_vec[1])) if np.linalg.norm(vf_vec) > 1e-8 else (vs0, vd0)
+        # 获取 Frenet 速度（vs0, vd0）和（vsf, vdf） 通过世界坐标系的速度来获得
+        vs0, vd0, _ = env.get_frenet_velocity(float(p0[0]), float(p0[1]), float(v0_vec[0]), float(v0_vec[1]), lane_id)
+        vsf, vdf, _ = env.get_frenet_velocity(float(pf[0]), float(pf[1]), float(vf_vec[0]),
+                                              float(vf_vec[1]), lane_id) if np.linalg.norm(vf_vec) > 1e-8 else (
+        vs0, vd0)
 
         # 假设加速度为0（和原方法一致）
         as0 = 0.0
@@ -313,7 +314,7 @@ class Polynomial(Fitting):
 
             # 转换速度：Frenet 速度 → 笛卡尔速度
             try:
-                vx, vy = env.frenet_velocity_to_cartesian(float(x), float(y), float(s_dot), float(d_dot))
+                vx, vy = env.frenet_velocity_to_cartesian(float(x), float(y), float(s_dot), float(d_dot),lane_id)
             except ValueError as e:
                 # fallback: 如果转换失败，用位置差分近似（不推荐，仅保底）
                 if i > 0:
@@ -337,7 +338,7 @@ class Polynomial(Fitting):
             node.set_car_state(cur_car_state)
 
             # 计算并存储 Frenet 坐标和 Frenet 速度
-            node.calculate_frenet(env, lane_id=lane_id[2])  # lane_id[2] 是 int 类型的 lane index
+            node.calculate_frenet(env)  # lane_id[2] 是 int 类型的 lane index
             node.velocity.set_frenet(env, x, y)
 
             nodes.append(node)

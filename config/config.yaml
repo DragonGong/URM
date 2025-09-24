@@ -1,5 +1,8 @@
 env_config:
-  env_id: "highway-fast-v0"
+#  env_id: "highway-fast-v0"
+#  env_id: "merge-v0"
+#  env_id: "roundabout-v0"
+  env_id: "intersection-v1"
   lanes_count: 4
   vehicles_count: 50
   duration: 400

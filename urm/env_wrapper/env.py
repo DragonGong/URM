@@ -1,4 +1,4 @@
-from typing import Union, Tuple, Any
+from typing import Union, Tuple, Any, Optional
 
 import gymnasium as gym
 import numpy as np
@@ -162,6 +162,17 @@ class Env(gym.Wrapper):
         ])
         return [tuple(rot @ c + np.array([cx, cy])) for c in corners]
 
+    def get_lane_by_id(self, lane_id: Tuple[str, str, int]):
+        env = self.env.unwrapped
+        road = env.road
+        network = road.network
+
+        try:
+            lane = network.get_lane(lane_id)
+        except KeyError:
+            raise ValueError(f"车道 {lane_id} 不存在于路网中")
+        return lane
+
     def world_to_lane_local(
             self,
             x: float,
@@ -282,7 +293,9 @@ class Env(gym.Wrapper):
         else:
             return start_node, end_node
 
-    def get_frenet_velocity(self, x: float, y: float, vx: float, vy: float) -> Tuple[float, float]:
+    def get_frenet_velocity(self, x: float, y: float, vx: float, vy: float,
+                            land_id: Optional[Tuple[str, str, int]] = None) -> Tuple[
+        float, float, Tuple[str, str, int]]:
         """
         根据世界坐标 (x, y) 和速度 (vx, vy)，计算当前车道坐标系下的纵向和横向速度。
 
@@ -295,33 +308,36 @@ class Env(gym.Wrapper):
         position = np.array([x, y])
         velocity = np.array([vx, vy])
 
-        # Step 1: 找到最近的车道
-        closest_lane = None
-        min_lateral = float('inf')
-        best_lane_id = None
+        if land_id is None:
+            # Step 1: 找到最近的车道
+            closest_lane = None
+            min_lateral = float('inf')
+            best_lane_id = None
 
-        for start_node in network.graph:
-            for end_node in network.graph[start_node]:
-                for idx, lane in enumerate(network.graph[start_node][end_node]):
-                    longitudinal, lateral = lane.local_coordinates(position)
-                    if abs(lateral) < abs(min_lateral):
-                        min_lateral = lateral
-                        closest_lane = lane
-                        best_lane_id = (start_node, end_node, idx)
+            for start_node in network.graph:
+                for end_node in network.graph[start_node]:
+                    for idx, lane in enumerate(network.graph[start_node][end_node]):
+                        longitudinal, lateral = lane.local_coordinates(position)
+                        if abs(lateral) < abs(min_lateral):
+                            min_lateral = lateral
+                            closest_lane = lane
+                            best_lane_id = (start_node, end_node, idx)
 
-        if closest_lane is None:
-            raise ValueError(f"在位置 ({x}, {y}) 未找到任何车道")
-
+            if closest_lane is None:
+                raise ValueError(f"在位置 ({x}, {y}) 未找到任何车道")
+            right_lane = closest_lane
+        else:
+            right_lane = self.get_lane_by_id(land_id)
         # Step 2: 计算车道在该点的切向量（单位向量，指向车道前进方向）
         # 方法：取 s 和 s+ds 两点，差分得切向量
-        longitudinal, lateral = closest_lane.local_coordinates(position)
+        longitudinal, lateral = right_lane.local_coordinates(position)
         ds = 0.1  # 微小步长
         s1 = longitudinal
         s2 = longitudinal + ds
 
         # 获取两个点的世界坐标（保持 d = lateral 不变，沿车道中心线微移）
-        p1 = closest_lane.position(s1, lateral)
-        p2 = closest_lane.position(s2, lateral)
+        p1 = right_lane.position(s1, lateral)
+        p2 = right_lane.position(s2, lateral)
 
         tangent_vector = np.array(p2) - np.array(p1)
         tangent_norm = np.linalg.norm(tangent_vector)
@@ -340,14 +356,15 @@ class Env(gym.Wrapper):
         v_lon = np.dot(velocity, tangent_unit)  # 纵向速度
         v_lat = np.dot(velocity, normal_unit)  # 横向速度（正 = 向左）
 
-        return v_lon, v_lat
+        return v_lon, v_lat, land_id
 
     def frenet_velocity_to_cartesian(
             self,
             x: float,
             y: float,
             v_lon: float,
-            v_lat: float
+            v_lat: float,
+            lane_id: Tuple[str, str, int],
     ) -> tuple[np.ndarray[tuple[int, ...], Any], np.ndarray[tuple[int, ...], Any]]:
         """
         将 Frenet 坐标系下的速度 (v_lon, v_lat) 转换为笛卡尔坐标系下的速度 (vx, vy)
@@ -360,30 +377,34 @@ class Env(gym.Wrapper):
         Returns:
             (vx, vy): 世界坐标系下的速度矢量
         """
-        env = self.env.unwrapped
-        network = env.road.network
+        # env = self.env.unwrapped
+        # network = env.road.network
         position = np.array([x, y])
-
-        # Step 1: 找到最近的车道
-        closest_lane = None
-        min_lateral = float('inf')
-
-        for start_node in network.graph:
-            for end_node in network.graph[start_node]:
-                for idx, lane in enumerate(network.graph[start_node][end_node]):
-                    longitudinal, lateral = lane.local_coordinates(position)
-                    if abs(lateral) < abs(min_lateral):
-                        min_lateral = lateral
-                        closest_lane = lane
-
-        if closest_lane is None:
-            raise ValueError(f"在位置 ({x}, {y}) 未找到任何车道")
-
+        # todo: delete the note
+        # if lane_id is None:
+        #     # Step 1: 找到最近的车道
+        #     closest_lane = None
+        #     min_lateral = float('inf')
+        #
+        #     for start_node in network.graph:
+        #         for end_node in network.graph[start_node]:
+        #             for idx, lane in enumerate(network.graph[start_node][end_node]):
+        #                 longitudinal, lateral = lane.local_coordinates(position)
+        #                 if abs(lateral) < abs(min_lateral):
+        #                     min_lateral = lateral
+        #                     closest_lane = lane
+        #
+        #     if closest_lane is None:
+        #         raise ValueError(f"在位置 ({x}, {y}) 未找到任何车道")
+        #     right_lane = closest_lane
+        # else:
+        #     right_lane = self.get_lane_by_id(lane_id)
+        right_lane = self.get_lane_by_id(lane_id)
         # Step 2: 计算切向量
-        longitudinal, lateral = closest_lane.local_coordinates(position)
+        longitudinal, lateral = right_lane.local_coordinates(position)
         ds = 0.1
-        p1 = closest_lane.position(longitudinal, lateral)
-        p2 = closest_lane.position(longitudinal + ds, lateral)
+        p1 = right_lane.position(longitudinal, lateral)
+        p2 = right_lane.position(longitudinal + ds, lateral)
 
         tangent_vector = np.array(p2) - np.array(p1)
         tangent_norm = np.linalg.norm(tangent_vector)
@@ -401,6 +422,3 @@ class Env(gym.Wrapper):
         vx, vy = velocity_cartesian[0], velocity_cartesian[1]
 
         return vx, vy
-
-
-
