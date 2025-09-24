@@ -97,7 +97,7 @@ class RiskMap:
             plt.pause(0.001)
 
     def plot_pro(self, ax=None, title: str = "RiskMap", show_colorbar: bool = True, interpolation='nearest',
-                 maintain_aspect_ratio: bool = True, finalize: bool = True):
+                 maintain_aspect_ratio: bool = True, finalize: bool = True, block=False):
         risk_avg = self.risk_sum
         if finalize:
             risk_avg = self.finalize()
@@ -145,7 +145,7 @@ class RiskMap:
 
         if created:
             plt.tight_layout()
-            plt.show(block=True)
+            plt.show(block=block)
 
     def plot_grid(self, vehicle_size: Tuple, ax=None, title: str = "RiskMap", show_colorbar: bool = True,
                   interpolation='nearest'):
@@ -270,4 +270,3 @@ class RiskMap:
             return float(np.mean(risks))
         else:
             return 0.0
-
