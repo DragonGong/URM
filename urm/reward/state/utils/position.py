@@ -1,12 +1,26 @@
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
+
+from urm.reward.state.interface import EnvInterface
 
 
 class Position:
     def __init__(self, x: float = 0.0, y: float = 0.0):
         self.x = x
         self.y = y
+        self.calculated_frenet = False
+        self.longitudinal: float = 0.0
+        self.lateral: float = 0.0
+        self.lane_id: Optional[Tuple[str, str, int]] = None
+
+    def calculate_frenet(self, env: EnvInterface):
+        start, end, lane_id = env.get_current_road_segment(self.x, self.y,return_lane_id=True)
+        longitudinal, lateral = env.world_to_lane_local(self.x, self.y, lane_id)
+        self.longitudinal = longitudinal
+        self.lateral = lateral
+        self.lane_id = lane_id
+        self.calculated_frenet = True
 
     @property
     def xy(self) -> Tuple[float, float]:

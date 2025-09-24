@@ -1,11 +1,21 @@
 import math
 from typing import Tuple
+from urm.reward.state.interface import EnvInterface
 
 
 class Velocity:
     def __init__(self, vx: float = 0.0, vy: float = 0.0):
         self.vx = vx
         self.vy = vy
+
+        self.calculated_frenet = False
+        self.v_lot = 0.0
+        self.v_lat = 0.0
+        self.land_id = None
+
+    def set_frenet(self, env: EnvInterface, x: float, y: float):
+        self.v_lot, self.v_lat, self.land_id = env.get_frenet_velocity(x, y, self.vx, self.vy)
+        self.calculated_frenet = True
 
     @property
     def xy(self) -> Tuple[float, float]:

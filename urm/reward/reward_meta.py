@@ -12,5 +12,5 @@ class RewardMeta(ABC):
 
     @abstractmethod
     def reward(self, ego_state: EgoState, surrounding_states: SurroundingState, env_condition: EnvInterface,
-               baseline_reward):
+               baseline_reward,action):
         ...

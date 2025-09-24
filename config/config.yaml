@@ -1,5 +1,8 @@
 env_config:
-  env_id: "highway-fast-v0"
+#  env_id: "highway-fast-v0"
+#  env_id: "merge-v0"
+#  env_id: "roundabout-v0"
+  env_id: "intersection-v1"
   lanes_count: 4
   vehicles_count: 50
   duration: 400
@@ -68,6 +71,177 @@ reward:
 
   behavior_configs:
     behaviors_list: [ "lateral_left","lateral_right","soft_accel","hard_accel","soft_decel","hard_decel" ]
+#    behaviors_list: [ "lateral_left","lateral_right" ,"cruise"]
+    scenarios:
+      - name: "scenario_1"
+        description: "左转巡航，后2秒保持轻加速"
+        sequence:
+          - lateral: "lateral_left"
+            longitudinal: "cruise"
+          - lateral: "lateral_keep"
+            longitudinal: "soft_accel"
+          - lateral: "lateral_keep"
+            longitudinal: "soft_accel"
+
+      - name: "scenario_2"
+        description: "右转巡航，后2秒保持轻加速"
+        sequence:
+          - lateral: "lateral_right"
+            longitudinal: "cruise"
+          - lateral: "lateral_keep"
+            longitudinal: "soft_accel"
+          - lateral: "lateral_keep"
+            longitudinal: "soft_accel"
+
+      - name: "scenario_3"
+        description: "左转巡航→左转轻加速→保持轻加速"
+        sequence:
+          - lateral: "lateral_left"
+            longitudinal: "cruise"
+          - lateral: "lateral_left"
+            longitudinal: "soft_accel"
+          - lateral: "lateral_keep"
+            longitudinal: "soft_accel"
+
+      - name: "scenario_4"
+        description: "右转巡航→右转轻加速→保持轻加速"
+        sequence:
+          - lateral: "lateral_right"
+            longitudinal: "cruise"
+          - lateral: "lateral_right"
+            longitudinal: "soft_accel"
+          - lateral: "lateral_keep"
+            longitudinal: "soft_accel"
+
+      - name: "scenario_5"
+        description: "前2秒巡航，第3秒左转轻加速"
+        sequence:
+          - lateral: "lateral_keep"
+            longitudinal: "cruise"
+          - lateral: "lateral_keep"
+            longitudinal: "cruise"
+          - lateral: "lateral_left"
+            longitudinal: "soft_accel"
+
+      - name: "scenario_6"
+        description: "前2秒巡航，第3秒右转轻加速"
+        sequence:
+          - lateral: "lateral_keep"
+            longitudinal: "cruise"
+          - lateral: "lateral_keep"
+            longitudinal: "cruise"
+          - lateral: "lateral_right"
+            longitudinal: "soft_accel"
+
+      - name: "scenario_7"
+        description: "3秒保持巡航"
+        sequence:
+          - lateral: "lateral_keep"
+            longitudinal: "cruise"
+          - lateral: "lateral_keep"
+            longitudinal: "cruise"
+          - lateral: "lateral_keep"
+            longitudinal: "cruise"
+
+      - name: "scenario_8"
+        description: "3秒保持轻加速"
+        sequence:
+          - lateral: "lateral_keep"
+            longitudinal: "soft_accel"
+          - lateral: "lateral_keep"
+            longitudinal: "soft_accel"
+          - lateral: "lateral_keep"
+            longitudinal: "soft_accel"
+
+      - name: "scenario_9"
+        description: "3秒保持轻刹车"
+        sequence:
+          - lateral: "lateral_keep"
+            longitudinal: "soft_decel"
+          - lateral: "lateral_keep"
+            longitudinal: "soft_decel"
+          - lateral: "lateral_keep"
+            longitudinal: "soft_decel"
+
+      - name: "scenario_10"
+        description: "第1秒巡航，后2秒轻刹车"
+        sequence:
+          - lateral: "lateral_keep"
+            longitudinal: "cruise"
+          - lateral: "lateral_keep"
+            longitudinal: "soft_decel"
+          - lateral: "lateral_keep"
+            longitudinal: "soft_decel"
+
+      - name: "scenario_11"
+        description: "第1秒轻加速，后2秒巡航"
+        sequence:
+          - lateral: "lateral_keep"
+            longitudinal: "soft_accel"
+          - lateral: "lateral_keep"
+            longitudinal: "cruise"
+          - lateral: "lateral_keep"
+            longitudinal: "cruise"
+
+      - name: "scenario_12"
+        description: "第1秒重刹车，后2秒巡航"
+        sequence:
+          - lateral: "lateral_keep"
+            longitudinal: "hard_decel"
+          - lateral: "lateral_keep"
+            longitudinal: "cruise"
+          - lateral: "lateral_keep"
+            longitudinal: "cruise"
+
+      - name: "scenario_13"
+        description: "第1秒重刹车，后2秒轻加速"
+        sequence:
+          - lateral: "lateral_keep"
+            longitudinal: "hard_decel"
+          - lateral: "lateral_keep"
+            longitudinal: "soft_accel"
+          - lateral: "lateral_keep"
+            longitudinal: "soft_accel"
+
+      - name: "scenario_14"
+        description: "前2秒重刹车，第3秒轻加速"
+        sequence:
+          - lateral: "lateral_keep"
+            longitudinal: "hard_decel"
+          - lateral: "lateral_keep"
+            longitudinal: "hard_decel"
+          - lateral: "lateral_keep"
+            longitudinal: "soft_accel"
+
+      - name: "scenario_15"
+        description: "轻加速→巡航→轻刹车（三阶段变化）"
+        sequence:
+          - lateral: "lateral_keep"
+            longitudinal: "soft_accel"
+          - lateral: "lateral_keep"
+            longitudinal: "cruise"
+          - lateral: "lateral_keep"
+            longitudinal: "soft_decel"
+
+      - name: "scenario_16"
+        description: "巡航→轻刹车→重刹车（刹车力度递增）"
+        sequence:
+          - lateral: "lateral_keep"
+            longitudinal: "cruise"
+          - lateral: "lateral_keep"
+            longitudinal: "soft_decel"
+          - lateral: "lateral_keep"
+            longitudinal: "hard_decel"
+
+      - name: "scenario_17"
+        description: "巡航→轻加速→重加速（加速力度递增）"
+        sequence:
+          - lateral: "lateral_keep"
+            longitudinal: "cruise"
+          - lateral: "lateral_keep"
+            longitudinal: "soft_accel"
+          - lateral: "lateral_keep"
+            longitudinal: "hard_accel"
 
   riskmap_config:
     cell_size: 3

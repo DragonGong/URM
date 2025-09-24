@@ -7,6 +7,7 @@ from urm.reward.state.ego_state import EgoState
 from urm.reward.state.region2d import Region2D
 from urm.reward.state.state import State
 from urm.reward.state.surrounding_state import SurroundingState
+from urm.reward.trajectory.behavior.behavioral_combination import BehavioralCombination
 from urm.reward.trajectory.behavior.behaviors import Behavior
 from urm.reward.trajectory.highway_env_state import HighwayState
 from urm.reward.trajectory.prediction.model import Model
@@ -17,7 +18,7 @@ from urm.reward.trajectory.fitting import *
 
 class TrajectoryGenerator:
     def __init__(self, ego_state: EgoState, surrounding_states: SurroundingState, env_condition: State,
-                 behaviors: List[Behavior],
+                 behaviors: Dict[str, List['BehavioralCombination']],
                  prediction_model: Model, config: Config):
         self.env_condition = env_condition.env_condition
         self.config: Optional[Config] = config
@@ -31,6 +32,9 @@ class TrajectoryGenerator:
 
     def fitting_edge(self, edge: TrajEdge):
         self.fitting_algorithm.fit_edge_by_node(edge)
+
+    def fitting_edge_frenet(self, edge: TrajEdge):
+        self.fitting_algorithm.fit_edge_by_node_frenet(edge, self.env_condition)
 
     def set_edge_risk(self, edge: TrajEdge):
         last_risk = edge.node_end.risk
@@ -58,12 +62,66 @@ class TrajectoryGenerator:
 
     def generate_right(self, step_nums=3, duration=1):
         root_node = TrajNode.from_car_state(self.ego_state)
-        traj_tree = self.traj_tree_generated_by_behaviors(root_node, self.ego_state, self.behaviors, step_nums,
-                                                          duration)
-        # traj_tree.visualize_plot_nb(show_direction=False)
+        # traj_tree = self.traj_tree_generated_by_behaviors(root_node, self.ego_state, self.behaviors, step_nums,
+        #                                                   duration)
+        traj_tree = self.traj_tree_generated_by_behavior_collection(root_node=root_node, ego_state=self.ego_state,
+                                                                    behaviors=self.behaviors, duration=duration)
+        traj_tree.visualize_plot_nb(show_direction=False)
         traj_tree = self.traj_tree_cut(traj_tree)
-        # traj_tree.visualize_plot_nb(show_direction=False)
+        traj_tree.visualize_plot_nb(show_direction=False)
         return traj_tree
+
+    def traj_tree_generated_by_behavior_collection(
+            self,
+            root_node: TrajNode,
+            ego_state: CarState,
+            behaviors: Dict[str, List['BehavioralCombination']],
+            duration: int,
+    ) -> TrajTree:
+        """
+        根据行为序列列表，直接构建轨迹树。
+        每个行为序列 behaviors[i] = [b0, b1, b2, ...] 表示从 root 开始，连续执行的行为。
+        构建时允许节点重合（不合并、不查重）。
+        优化版：构建时直接维护当前子树引用，避免递归查找。
+        """
+        if not behaviors:
+            return TrajTree.from_node(root_node)
+
+        root_tree = TrajTree.from_node(root_node)
+
+        for behavior_sequence in behaviors.values():
+            current_node = root_node
+            current_state = ego_state
+            current_tree = root_tree  # 当前所在的子树（初始为根树）
+
+            for step_idx, behavior in enumerate(behavior_sequence):
+                # 计算目标状态
+                target_car_state = behavior.target_state(
+                    initial_position=current_state.position_cls,
+                    state=HighwayState.from_carstate(current_state, duration)
+                )
+
+                # 创建新节点
+                new_node = TrajNode.from_car_state(target_car_state)
+                new_node.set_timestep(step_idx + 1)
+
+                # 创建边并拟合
+                edge = TrajEdge(current_node, new_node)
+                assert isinstance(behavior, BehavioralCombination), "behavior is not BehavioralCombination"
+                edge.action = (behavior.longitudinal.behavior_type, behavior.lateral.behavior_type)
+                self.fitting_edge_frenet(edge)
+
+                # 创建新子树（叶子）
+                new_subtree = TrajTree.from_node(new_node)
+                # 挂接到当前子树
+                current_tree.add_child(edge, new_subtree)
+
+                # 推进到下一步
+                current_node = new_node
+                current_state = target_car_state
+                current_tree = new_subtree  # 下一步的“当前子树”就是刚创建的这个
+
+        return root_tree
 
     def traj_tree_generated_by_behaviors(self, root_node: TrajNode, ego_state: CarState, behaviors: List[Behavior],
                                          step_nums,
@@ -84,56 +142,6 @@ class TrajectoryGenerator:
             self.fitting_edge(edge)
             tree.add_child(edge, child_tree)
         return tree
-
-    def traj_tree_cut_1(self, traj_tree: TrajTree) -> TrajTree:
-        """
-        对轨迹树进行碰撞剪枝：
-        - 遍历每条边，采样点调用 judge_collision
-        - 若任意采样点碰撞 → 删除该边及子树
-        - 否则保留
-        - 返回剪枝后的新树（不修改原树）
-        """
-
-        def _prune_tree(tree: TrajTree) -> Optional[TrajTree]:
-            # 创建当前节点的副本（深拷贝根节点）
-            new_root = deepcopy(tree.root)
-
-            # 存储安全的子边和子树（绑定在一起）
-            safe_children = []
-
-            # ✅ 直接遍历绑定的 (edge, child_tree) 元组，语义清晰，绝对安全
-            for edge, child_tree in tree.iter_children():
-                # 采样边上的点（默认10个点）
-                sampled_points: List[TrajNode] = edge.sample(num_points=10)
-
-                # 检查所有采样点是否碰撞
-                collision_detected = any(
-                    self.judge_conventional_collision(point.car_state)
-                    for point in sampled_points
-                )
-
-                if not collision_detected:
-                    # 安全：递归剪枝子树
-                    pruned_child = _prune_tree(child_tree)
-                    if pruned_child is not None:  # 子树可能被完全剪掉
-                        # 深拷贝边（避免修改原边）
-                        new_edge = deepcopy(edge)
-                        new_edge.node_begin = new_root  # 修正起点为新根
-                        # ✅ 直接添加绑定元组
-                        safe_children.append((new_edge, pruned_child))
-
-            # 如果没有任何子树保留，返回叶子节点
-            if len(safe_children) == 0:
-                return TrajTree.from_node(new_root)
-            else:
-                # ✅ 使用新的构造方式（只传 children 列表）
-                return TrajTree(root=new_root, children=safe_children)
-
-        # 开始剪枝
-        pruned_tree = _prune_tree(traj_tree)
-        if pruned_tree is None:
-            return TrajTree.from_node(deepcopy(traj_tree.root))
-        return pruned_tree
 
     def traj_tree_cut(self, traj_tree: TrajTree) -> TrajTree:
         """

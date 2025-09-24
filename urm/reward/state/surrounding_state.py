@@ -4,12 +4,12 @@ from typing import List, Optional
 
 
 class SurroundingState(State):
-    def __init__(self, cars: Optional[List['CarState']] = None, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, env, cars: Optional[List['CarState']] = None, **kwargs):
+        super().__init__(env, **kwargs)
         self.cars = cars if cars is not None else []  # 存储 CarState 对象的列表
 
     @classmethod
-    def from_road_vehicles(cls, road_vehicles, exclude_vehicle=None, **kwargs):
+    def from_road_vehicles(cls, env, road_vehicles, exclude_vehicle=None, **kwargs):
         """
         从 env.road.vehicles 构造 SurroundingState，可选排除某辆车（如 ego）
         """
@@ -19,8 +19,8 @@ class SurroundingState(State):
                 continue
             pos = v.position
             vel = v.velocity
-            cars.append(CarState(x=pos[0], y=pos[1], vx=vel[0], vy=vel[1]))
-        return cls(cars=cars, **kwargs)
+            cars.append(CarState(env=env, x=pos[0], y=pos[1], vx=vel[0], vy=vel[1], **kwargs))
+        return cls(env=env, cars=cars, **kwargs)
 
     def add_car(self, car: 'CarState'):
         """添加一辆周围车辆"""

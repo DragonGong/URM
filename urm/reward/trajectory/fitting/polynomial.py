@@ -9,7 +9,9 @@ from urm.reward.trajectory.traj import TrajEdge, TrajNode
 
 from urm.config import Config
 from urm.reward.state.utils.velocity import Velocity
-from ...state.car_state import CarState
+from urm.reward.state.car_state import CarState
+from urm.reward.state.ego_state import EgoState
+from urm.reward.state.interface import EnvInterface
 
 
 @register_fitting(ModelName.Polynomial)
@@ -180,6 +182,169 @@ class Polynomial(Fitting):
         # write back to edge
         edge.discrete_points = nodes
         # 保存拟合算法标识，__name__ 在 __repr__ 中会被使用
+        edge.fitting_algorithm = self.__class__
+
+        return nodes
+
+    def fit_edge_by_node_frenet(self, edge: 'TrajEdge', env: 'EnvInterface') -> List['TrajNode']:
+        """
+        使用 EnvInterface 提供的真实道路 Frenet 坐标系进行多项式轨迹拟合。
+        拟合 s(t) 和 d(t)，再转换回笛卡尔坐标，生成 TrajNode 列表。
+        每个节点都会计算并存储 Frenet 坐标和 Frenet 速度。
+        """
+        # 获取起点和终点的世界坐标
+        p0 = np.array([edge.node_begin.x, edge.node_begin.y], dtype=float)
+        pf = np.array([edge.node_end.x, edge.node_end.y], dtype=float)
+
+        # 时间参数（和原方法一致）
+        t0 = float(edge.node_begin.get_time() if hasattr(edge.node_begin, "get_time") else 0.0)
+        tf = float(edge.node_end.get_time() if hasattr(edge.node_end, "get_time") else (t0 + self.interval_duration))
+        T = tf - t0
+        if T <= 1e-8:
+            T = max(self.interval_duration, 1e-3)
+
+        num_points = max(1, int(round(T / self.interval_duration)))
+        N = num_points
+
+        # 获取速度（和原方法一致）
+        def vel_to_np(v):
+            if v is None:
+                return np.array([0.0, 0.0], dtype=float)
+            if isinstance(v, Velocity):
+                return np.array([v.vx, v.vy], dtype=float)
+            return np.array(v, dtype=float)
+
+        v0_vec = vel_to_np(getattr(edge.node_begin, "velocity", None))
+        vf_vec = vel_to_np(getattr(edge.node_end, "velocity", None))
+
+        # 获取起点和终点所在的车道 ID（使用 EnvInterface）
+        try:
+            _, _, lane_id_begin = env.get_current_road_segment(float(p0[0]), float(p0[1]), return_lane_id=True)
+            _, _, lane_id_end = env.get_current_road_segment(float(pf[0]), float(pf[1]), return_lane_id=True)
+        except ValueError as e:
+            raise ValueError(f"无法获取车道ID: {e}")
+
+        # 如果起终点车道不同，我们统一使用起点车道（或可插值，这里简化）
+        lane_id = lane_id_begin  # Notice：下面全部都是基于这个lane id来算
+
+        # 获取 Frenet 坐标 (s, d)
+        s0, d0 = env.world_to_lane_local(float(p0[0]), float(p0[1]), lane_id)
+        sf, df = env.world_to_lane_local(float(pf[0]), float(pf[1]), lane_id)
+
+        # 获取 Frenet 速度（vs0, vd0）和（vsf, vdf） 通过世界坐标系的速度来获得
+        vs0, vd0, _ = env.get_frenet_velocity(float(p0[0]), float(p0[1]), float(v0_vec[0]), float(v0_vec[1]), lane_id)
+        vsf, vdf, _ = env.get_frenet_velocity(float(pf[0]), float(pf[1]), float(vf_vec[0]),
+                                              float(vf_vec[1]), lane_id) if np.linalg.norm(vf_vec) > 1e-8 else (
+        vs0, vd0)
+
+        # 假设加速度为0（和原方法一致）
+        as0 = 0.0
+        asf = 0.0
+        ad0 = 0.0
+        adf = 0.0
+
+        # ----------------------------
+        # 横向 d(t): quintic 多项式
+        # ----------------------------
+        M = np.zeros((6, 6), dtype=float)
+        M[0, :] = [1, 0, 0, 0, 0, 0]  # d(0)
+        M[1, :] = [0, 1, 0, 0, 0, 0]  # d'(0)
+        M[2, :] = [0, 0, 2, 0, 0, 0]  # d''(0)
+        Tpow = np.array([1, T, T ** 2, T ** 3, T ** 4, T ** 5], dtype=float)
+        M[3, :] = Tpow  # d(T)
+        M[4, :] = [0, 1, 2 * T, 3 * T ** 2, 4 * T ** 3, 5 * T ** 4]  # d'(T)
+        M[5, :] = [0, 0, 2, 6 * T, 12 * T ** 2, 20 * T ** 3]  # d''(T)
+
+        b_vec_d = np.array([d0, vd0, ad0, df, vdf, adf], dtype=float)
+
+        try:
+            a_coeffs = np.linalg.solve(M, b_vec_d)
+        except np.linalg.LinAlgError:
+            a_coeffs, *_ = np.linalg.lstsq(M, b_vec_d, rcond=None)
+
+        # ----------------------------
+        # 纵向 s(t): quartic 多项式（边界：s(0), s'(0), s''(0), s'(T), s''(T)=0）
+        # ----------------------------
+        b0 = s0
+        b1 = vs0
+        b2 = as0 / 2.0
+
+        A2 = np.array([
+            [3 * T ** 2, 4 * T ** 3],
+            [6 * T, 12 * T ** 2]
+        ], dtype=float)
+        rhs2 = np.array([
+            vsf - (b1 + 2 * b2 * T),
+            -2 * b2
+        ], dtype=float)
+
+        try:
+            sol_b34 = np.linalg.solve(A2, rhs2)
+            b3, b4 = float(sol_b34[0]), float(sol_b34[1])
+        except np.linalg.LinAlgError:
+            sol_b34, *_ = np.linalg.lstsq(A2, rhs2, rcond=None)
+            b3, b4 = float(sol_b34[0]), float(sol_b34[1])
+
+        b_coeffs = np.array([b0, b1, b2, b3, b4], dtype=float)
+
+        # ----------------------------
+        # 采样并生成 TrajNode
+        # ----------------------------
+        nodes: List['TrajNode'] = []
+        for i in range(N + 1):
+            local_t = (i / N) * T
+
+            # 计算 d(t), d'(t)
+            t = local_t
+            d_t = (a_coeffs[0] + a_coeffs[1] * t + a_coeffs[2] * t ** 2 +
+                   a_coeffs[3] * t ** 3 + a_coeffs[4] * t ** 4 + a_coeffs[5] * t ** 5)
+            d_dot = (a_coeffs[1] + 2 * a_coeffs[2] * t + 3 * a_coeffs[3] * t ** 2 +
+                     4 * a_coeffs[4] * t ** 3 + 5 * a_coeffs[5] * t ** 4)
+
+            # 计算 s(t), s'(t)
+            s_t = (b_coeffs[0] + b_coeffs[1] * t + b_coeffs[2] * t ** 2 +
+                   b_coeffs[3] * t ** 3 + b_coeffs[4] * t ** 4)
+            s_dot = (b_coeffs[1] + 2 * b_coeffs[2] * t + 3 * b_coeffs[3] * t ** 2 + 4 * b_coeffs[4] * t ** 3)
+
+            # 转换到笛卡尔坐标
+            try:
+                x, y = env.lane_local_to_world(lane_id, float(s_t), float(d_t))
+            except ValueError as e:
+                raise ValueError(f"无法转换 Frenet 到世界坐标: {e}")
+
+            # 转换速度：Frenet 速度 → 笛卡尔速度
+            try:
+                vx, vy = env.frenet_velocity_to_cartesian(float(x), float(y), float(s_dot), float(d_dot),lane_id)
+            except ValueError as e:
+                # fallback: 如果转换失败，用位置差分近似（不推荐，仅保底）
+                if i > 0:
+                    prev_node = nodes[-1]
+                    dt = local_t - (nodes[-1].get_time() - t0)
+                    vx = (x - prev_node.x) / dt if dt > 1e-6 else 0.0
+                    vy = (y - prev_node.y) / dt if dt > 1e-6 else 0.0
+                else:
+                    vx, vy = 0.0, 0.0
+
+            # 创建节点
+            node = TrajNode(float(x), float(y))
+            vel = Velocity(float(vx), float(vy))
+            node.set_velocity(vel)
+            node.set_timestep(t0 + local_t)
+
+            # 设置 car_state（如果需要）
+            cur_car_state = deepcopy(edge.node_begin.car_state)
+            cur_car_state.set_velocity(vx, vy)
+            cur_car_state.set_position(x, y)
+            node.set_car_state(cur_car_state)
+
+            # 计算并存储 Frenet 坐标和 Frenet 速度
+            node.calculate_frenet(env)  # lane_id[2] 是 int 类型的 lane index
+            node.velocity.set_frenet(env, x, y)
+
+            nodes.append(node)
+
+        # 写回 edge
+        edge.discrete_points = nodes
         edge.fitting_algorithm = self.__class__
 
         return nodes

@@ -76,10 +76,10 @@ class RiskMapManager:
         # 根据maps的数量决定subplot的布局
         n = len(self.maps)
         cols = math.ceil(math.sqrt(n))  # 列数
-        rows = math.ceil(n / cols)      # 行数
+        rows = math.ceil(n / cols)  # 行数
 
         # 创建大窗口和子图
-        fig, axes = plt.subplots(rows, cols, figsize=(cols*4, rows*3))
+        fig, axes = plt.subplots(rows, cols, figsize=(cols * 4, rows * 3))
         axes = axes.ravel() if n > 1 else [axes]  # 如果只有一个子图，确保axes是一个列表
 
         for idx, risk_map in enumerate(self.maps):
@@ -124,8 +124,6 @@ class RiskMapManager:
         plt.tight_layout()
         plt.show(block=True)
 
-
-
     def sum_all(self) -> 'RiskMap':
         """
         将所有时间片的 RiskMap 累加，返回一个新的 RiskMap 对象
@@ -142,6 +140,91 @@ class RiskMapManager:
         for rm in self.maps:
             new_map.risk_sum += rm.risk_sum
             new_map.count += rm.count
+
+        return new_map
+
+    def _get_occupied_mask_from_nodes(self, traj_nodes, risk_map: 'RiskMap') -> np.ndarray:
+        """
+        根据 traj_nodes 中的节点位置，生成 risk_map 上被占据的格子的布尔 mask。
+
+        Parameters:
+            traj_nodes: List[TrajNode]
+            risk_map: RiskMap 实例
+
+        Returns:
+            mask: np.ndarray[bool]，shape == (ny, nx)，True 表示该格子被至少一个 node 覆盖
+        """
+        mask = np.zeros((risk_map.ny, risk_map.nx), dtype=bool)
+
+        for node in traj_nodes:
+            # 转换到局部坐标系
+            x_local, y_local = self.world_to_local(node.x, node.y)
+
+            # 计算对应的网格索引
+            i = int((x_local - risk_map.x_min) / risk_map.cell_size)
+            j = int((y_local - risk_map.y_min) / risk_map.cell_size)
+
+            # 边界检查
+            if 0 <= i < risk_map.nx and 0 <= j < risk_map.ny:
+                mask[j, i] = True
+
+        return mask
+
+    def get_risk_by_tree(self, traj_nodes, risk_map: 'RiskMap') -> (float, int, RiskMap):
+        """
+        计算 traj_nodes 覆盖的 risk_map 格子的总风险值和格子数量。
+
+        注意：多个节点落在同一格子只计一次（通过 mask 去重）。
+
+        Returns:
+            total_risk (float): 所有被覆盖格子的平均风险值之和（即 Σ(risk_avg)）
+            num_cells (int): 被覆盖的格子数量
+        """
+        # 1. 生成被占据的格子 mask
+        mask = self._get_occupied_mask_from_nodes(traj_nodes, risk_map)
+
+        # 2. 计算每个格子的平均风险（避免除零）
+        risk_avg = np.zeros_like(risk_map.risk_sum)
+        valid = risk_map.count > 0
+        risk_avg[valid] = risk_map.risk_sum[valid] / risk_map.count[valid]
+
+        # 3. 只对 mask 为 True 且 count > 0 的格子求和（若 count==0，risk_avg=0，不影响）
+        total_risk = float(np.sum(risk_avg[mask]))
+        num_cells = int(np.sum(mask))
+        riskmap_mask = self.mask_riskmap(risk_map, mask)
+        return total_risk, num_cells, riskmap_mask
+
+    def mask_riskmap(self, risk_map: 'RiskMap', mask: np.ndarray) -> 'RiskMap':
+        """
+        根据给定的布尔 mask，生成一个新的 RiskMap：
+        - 仅保留 mask 为 True 的格子的 risk_sum 和 count；
+        - 其余格子的 risk_sum 和 count 设为 0。
+
+        Parameters:
+            risk_map: 原始 RiskMap 对象
+            mask: 布尔数组，shape 必须为 (ny, nx)，与 risk_map 的网格一致
+
+        Returns:
+            新的 RiskMap 对象
+        """
+        # 检查 mask 形状是否匹配
+        if mask.shape != (risk_map.ny, risk_map.nx):
+            raise ValueError(
+                f"Mask shape {mask.shape} 不匹配 RiskMap 网格 {(risk_map.ny, risk_map.nx)}"
+            )
+
+        # 创建新的 RiskMap（复用原图的边界和 cell_size）
+        new_map = RiskMap(
+            x_min=risk_map.x_min,
+            x_max=risk_map.x_max,
+            y_min=risk_map.y_min,
+            y_max=risk_map.y_max,
+            cell_size=risk_map.cell_size
+        )
+
+        # 应用 mask：只保留 mask 为 True 的区域
+        new_map.risk_sum = np.where(mask, risk_map.risk_sum, 0.0)
+        new_map.count = np.where(mask, risk_map.count, 0)
 
         return new_map
 

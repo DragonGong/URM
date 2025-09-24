@@ -9,6 +9,7 @@ from urm.reward.trajectory.highway_env_state import HighwayState as State
 from . import BehaviorFactory
 
 from .behaviors import Behavior
+from .constant import BehaviorName
 
 
 class LateralBehavior(Behavior):
@@ -26,6 +27,7 @@ class LateralBehavior(Behavior):
         pass
 
 
+@BehaviorFactory.register(BehaviorName.LATERAL_KEEP.value)
 class LateralKeep(LateralBehavior):
     def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
         super().__init__(config, **kwargs)
@@ -38,7 +40,7 @@ class LateralKeep(LateralBehavior):
         return root_offset
 
 
-@BehaviorFactory.register("lateral_left")
+@BehaviorFactory.register(BehaviorName.LATERAL_LEFT.value)
 class LateralLeft(LateralBehavior):
     def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
         super().__init__(config, **kwargs)
@@ -77,10 +79,10 @@ class LateralLeft(LateralBehavior):
         return target_car_state
 
     def target_offset(self, root_offset: float, state: State) -> float:
-        return root_offset - (0.3 if state.velocity < 5 else 0.5)
+        return root_offset - (2 if state.velocity.magnitude < 5 else 4)
 
 
-@BehaviorFactory.register("lateral_right")
+@BehaviorFactory.register(BehaviorName.LATERAL_RIGHT.value)
 class LateralRight(LateralBehavior):
     def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
         super().__init__(config, **kwargs)
@@ -118,4 +120,4 @@ class LateralRight(LateralBehavior):
         return target_car_state
 
     def target_offset(self, root_offset: float, state: State) -> float:
-        return root_offset + (0.3 if state.velocity < 5 else 0.5)
+        return root_offset + (2 if state.velocity.magnitude < 5 else 4)

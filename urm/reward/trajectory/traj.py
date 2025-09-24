@@ -2,10 +2,11 @@ from copy import deepcopy
 
 from urm.reward.state.car_state import CarState
 from urm.reward.state.utils.position import Position
-from typing import List, Optional, Callable, Iterator, Union
+from typing import List, Optional, Callable, Iterator, Union, Tuple
 
 from urm.reward.state.utils.velocity import Velocity
 from urm.reward.trajectory.risk import Risk
+from urm.reward.trajectory.behavior import BehaviorName
 
 
 class TrajNode(Position):
@@ -14,7 +15,7 @@ class TrajNode(Position):
         self.risk: Optional[Risk] = kwargs.get('risk', None)
         self._time: float = 0  # 建树的时候就会赋值
         self.velocity: Optional[Velocity] = kwargs.get('velocity', None)
-        self._car_state: Optional[CarState] = kwargs.get('velocity', None)
+        self._car_state: Optional[CarState] = kwargs.get('car_state', None)
 
     def get_time(self) -> float:
         return self._time
@@ -24,15 +25,8 @@ class TrajNode(Position):
 
     @property
     def car_state(self) -> CarState:
-        if self._car_state is None:
-            if self.velocity is None:
-                return CarState.from_position(self)
-            else:
-                cls = CarState.from_position(self)
-                cls.set_velocity(self.velocity.xy)
-                return cls
-        else:
-            return self._car_state
+        assert self._car_state is not None, "cat_state is fucking None!"
+        return self._car_state
 
     def set_car_state(self, car_state: CarState):
         self._car_state = car_state
@@ -92,6 +86,8 @@ class TrajEdge:
         self.node_end = node_end
         self.discrete_points: Optional[List[TrajNode]] = None
         self.fitting_algorithm = None
+        self.action: Optional[Tuple[
+            BehaviorName, BehaviorName]] = None  # behavior.longitudinal.behavior_type, behavior.lateral.behavior_type
 
     def set_discrete_points(self, node_list: List[TrajNode]):
         self.discrete_points = node_list
@@ -123,10 +119,9 @@ class TrajEdge:
                 points.append(Position(x, y))
             return points
 
-
-def __repr__(self) -> str:
-    algo_name = self.fitting_algorithm.__name__ if self.fitting_algorithm else "linear"
-    return f"TrajEdge({self.node_begin} → {self.node_end}, algo={algo_name})"
+    def __repr__(self) -> str:
+        algo_name = self.fitting_algorithm.__name__ if self.fitting_algorithm else "linear"
+        return f"TrajEdge({self.node_begin} → {self.node_end}, algo={algo_name})"
 
 
 # abandoned

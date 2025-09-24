@@ -1,8 +1,9 @@
 # ===== 全局工厂 =====
-from typing import Dict, Type
+from typing import Dict, Type, List
 
 from urm.config import Config
 from urm.reward.trajectory.behavior import Behavior
+from .constant import BehaviorName
 
 
 class BehaviorFactory:
@@ -15,8 +16,9 @@ class BehaviorFactory:
     def register(cls, name: str):
         """注册装饰器"""
 
-        def decorator(klass):
+        def decorator(klass: Type[Behavior]):
             cls._registry[name] = klass
+            klass.behavior_type = BehaviorName.from_str(name)
             return klass
 
         return decorator
@@ -53,3 +55,27 @@ class BehaviorFactory:
             else:
                 print(f"Warning: Behavior '{name}' 配置了但未注册")
         return instances
+
+    def create_behavioral_combination(self, lateral_name: str, longitudinal_name: str) -> 'BehavioralCombination':
+        """根据名字创建行为组合"""
+        lateral_behavior = self.create(lateral_name, self.config.behavior_configs)
+        longitudinal_behavior = self.create(longitudinal_name, self.config.behavior_configs)
+        from .behavioral_combination import BehavioralCombination
+        behavior_combination = BehavioralCombination(self.config.behavior_configs)
+        behavior_combination.longitudinal = longitudinal_behavior
+        behavior_combination.lateral = lateral_behavior
+        return behavior_combination
+
+    def get_all_scenarios_as_combinations(self) -> Dict[str, List['BehavioralCombination']]:
+        """
+        根据 config.scenarios 返回所有场景的行为组合序列
+        返回: {scenario_name: [BehavioralCombination, ...]}
+        """
+        result = {}
+        for scenario in self.config.scenarios:
+            combinations = []
+            for step in scenario.sequence:
+                combo = self.create_behavioral_combination(step.lateral, step.longitudinal)
+                combinations.append(combo)
+            result[scenario.name] = combinations
+        return result
