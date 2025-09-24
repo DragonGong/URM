@@ -4,6 +4,9 @@ import numpy as np
 
 @runtime_checkable
 class EnvInterface(Protocol):
+    def get_action_dict(self):
+        ...
+
     def _extract_xy(self, pos: Any) -> Tuple[float, float]:
         ...
 

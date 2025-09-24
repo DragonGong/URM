@@ -2,10 +2,11 @@ from copy import deepcopy
 
 from urm.reward.state.car_state import CarState
 from urm.reward.state.utils.position import Position
-from typing import List, Optional, Callable, Iterator, Union
+from typing import List, Optional, Callable, Iterator, Union, Tuple
 
 from urm.reward.state.utils.velocity import Velocity
 from urm.reward.trajectory.risk import Risk
+from urm.reward.trajectory.behavior import BehaviorName
 
 
 class TrajNode(Position):
@@ -85,6 +86,8 @@ class TrajEdge:
         self.node_end = node_end
         self.discrete_points: Optional[List[TrajNode]] = None
         self.fitting_algorithm = None
+        self.action: Optional[Tuple[
+            BehaviorName, BehaviorName]] = None  # behavior.longitudinal.behavior_type, behavior.lateral.behavior_type
 
     def set_discrete_points(self, node_list: List[TrajNode]):
         self.discrete_points = node_list
@@ -116,10 +119,9 @@ class TrajEdge:
                 points.append(Position(x, y))
             return points
 
-
-def __repr__(self) -> str:
-    algo_name = self.fitting_algorithm.__name__ if self.fitting_algorithm else "linear"
-    return f"TrajEdge({self.node_begin} → {self.node_end}, algo={algo_name})"
+    def __repr__(self) -> str:
+        algo_name = self.fitting_algorithm.__name__ if self.fitting_algorithm else "linear"
+        return f"TrajEdge({self.node_begin} → {self.node_end}, algo={algo_name})"
 
 
 # abandoned

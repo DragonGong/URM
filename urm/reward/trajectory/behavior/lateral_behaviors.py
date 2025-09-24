@@ -27,7 +27,7 @@ class LateralBehavior(Behavior):
         pass
 
 
-@BehaviorFactory.register(BehaviorName.LATERAL_KEEP)
+@BehaviorFactory.register(BehaviorName.LATERAL_KEEP.value)
 class LateralKeep(LateralBehavior):
     def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
         super().__init__(config, **kwargs)
@@ -40,7 +40,7 @@ class LateralKeep(LateralBehavior):
         return root_offset
 
 
-@BehaviorFactory.register(BehaviorName.LATERAL_LEFT)
+@BehaviorFactory.register(BehaviorName.LATERAL_LEFT.value)
 class LateralLeft(LateralBehavior):
     def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
         super().__init__(config, **kwargs)
@@ -82,7 +82,7 @@ class LateralLeft(LateralBehavior):
         return root_offset - (2 if state.velocity.magnitude < 5 else 4)
 
 
-@BehaviorFactory.register(BehaviorName.LATERAL_RIGHT)
+@BehaviorFactory.register(BehaviorName.LATERAL_RIGHT.value)
 class LateralRight(LateralBehavior):
     def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
         super().__init__(config, **kwargs)

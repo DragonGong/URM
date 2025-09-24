@@ -26,7 +26,7 @@ class LongitudinalBehavior(Behavior):
         raise NotImplementedError
 
 
-@BehaviorFactory.register(BehaviorName.CRUISE)
+@BehaviorFactory.register(BehaviorName.CRUISE.value)
 class LongitudinalCruise(LongitudinalBehavior):
     def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
         super().__init__(config, **kwargs)
@@ -54,7 +54,7 @@ class LongitudinalCruise(LongitudinalBehavior):
         return root_velocity
 
 
-@BehaviorFactory.register(BehaviorName.SOFT_ACCEL)
+@BehaviorFactory.register(BehaviorName.SOFT_ACCEL.value)
 class SoftAcceleration(LongitudinalBehavior):
     def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
         super().__init__(config, **kwargs)
@@ -99,7 +99,7 @@ class SoftAcceleration(LongitudinalBehavior):
         return min(root_velocity + 2.5, 50.0)
 
 
-@BehaviorFactory.register(BehaviorName.HARD_ACCEL)
+@BehaviorFactory.register(BehaviorName.HARD_ACCEL.value)
 class HardAcceleration(LongitudinalBehavior):
     def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
         super().__init__(config, **kwargs)
@@ -144,7 +144,7 @@ class HardAcceleration(LongitudinalBehavior):
         return min(root_velocity + 5.0, 50.0)
 
 
-@BehaviorFactory.register(BehaviorName.SOFT_DECEL)
+@BehaviorFactory.register(BehaviorName.SOFT_DECEL.value)
 class SoftDeceleration(LongitudinalBehavior):
     def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
         super().__init__(config, **kwargs)
@@ -188,7 +188,7 @@ class SoftDeceleration(LongitudinalBehavior):
         return max(root_velocity - 3.0, 0.01)
 
 
-@BehaviorFactory.register(BehaviorName.HARD_DECEL)
+@BehaviorFactory.register(BehaviorName.HARD_DECEL.value)
 class HardDeceleration(LongitudinalBehavior):
     def __init__(self, config: Config.RewardConfig.BehaviorConfigs, **kwargs):
         super().__init__(config, **kwargs)

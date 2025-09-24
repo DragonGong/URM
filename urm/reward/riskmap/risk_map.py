@@ -270,3 +270,4 @@ class RiskMap:
             return float(np.mean(risks))
         else:
             return 0.0
+

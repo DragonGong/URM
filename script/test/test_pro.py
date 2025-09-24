@@ -1,3 +1,5 @@
+import argparse
+
 from urm.config.config import Config
 from urm.test import test_model
 
@@ -9,6 +11,20 @@ def load_config(config_path="config/config.yaml"):
 
 
 if __name__ == "__main__":
-    config_dict = load_config()
+
+    # 创建命令行参数解析器
+    parser = argparse.ArgumentParser(description='训练模型的脚本，支持通过命令行指定配置文件路径')
+
+    # 添加配置文件路径参数，-c 和 --config 都可使用，指定默认值
+    parser.add_argument('-c', '--config',
+                        type=str,
+                        default="config/config.yaml",
+                        help='配置文件 config.yaml 的路径（默认: config/config.yaml）')
+
+    # 解析命令行参数
+    args = parser.parse_args()
+
+    # 加载配置并训练模型
+    config_dict = load_config(args.config)
     config = Config(config_dict)
     test_model(config)

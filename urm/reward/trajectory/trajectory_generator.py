@@ -18,7 +18,7 @@ from urm.reward.trajectory.fitting import *
 
 class TrajectoryGenerator:
     def __init__(self, ego_state: EgoState, surrounding_states: SurroundingState, env_condition: State,
-                 behaviors:  Dict[str, List['BehavioralCombination']],
+                 behaviors: Dict[str, List['BehavioralCombination']],
                  prediction_model: Model, config: Config):
         self.env_condition = env_condition.env_condition
         self.config: Optional[Config] = config
@@ -64,7 +64,8 @@ class TrajectoryGenerator:
         root_node = TrajNode.from_car_state(self.ego_state)
         # traj_tree = self.traj_tree_generated_by_behaviors(root_node, self.ego_state, self.behaviors, step_nums,
         #                                                   duration)
-        traj_tree = self.traj_tree_generated_by_behavior_collection(root_node=root_node,ego_state=self.ego_state,behaviors=self.behaviors,duration=duration)
+        traj_tree = self.traj_tree_generated_by_behavior_collection(root_node=root_node, ego_state=self.ego_state,
+                                                                    behaviors=self.behaviors, duration=duration)
         traj_tree.visualize_plot_nb(show_direction=False)
         traj_tree = self.traj_tree_cut(traj_tree)
         traj_tree.visualize_plot_nb(show_direction=False)
@@ -106,6 +107,8 @@ class TrajectoryGenerator:
 
                 # 创建边并拟合
                 edge = TrajEdge(current_node, new_node)
+                assert isinstance(behavior, BehavioralCombination), "behavior is not BehavioralCombination"
+                edge.action = (behavior.longitudinal.behavior_type, behavior.lateral.behavior_type)
                 self.fitting_edge_frenet(edge)
 
                 # 创建新子树（叶子）

@@ -16,6 +16,13 @@ class Env(gym.Wrapper):
         self.config = config
         print(f"get_road_width_info :{self.get_road_width_info()}")
 
+    def get_action_dict(self):
+        if hasattr(self.env.unwrapped.action_type, "actions"):
+            actions_dict = self.env.unwrapped.action_type.actions
+            return actions_dict
+        else:
+            return None
+
     def _extract_xy(self, pos: Any) -> Tuple[float, float]:
         """
         从多种输入格式中提取 x, y 坐标

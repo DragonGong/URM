@@ -3,6 +3,7 @@ from typing import Dict, Type, List
 
 from urm.config import Config
 from urm.reward.trajectory.behavior import Behavior
+from .constant import BehaviorName
 
 
 class BehaviorFactory:
@@ -15,8 +16,9 @@ class BehaviorFactory:
     def register(cls, name: str):
         """注册装饰器"""
 
-        def decorator(klass):
+        def decorator(klass: Type[Behavior]):
             cls._registry[name] = klass
+            klass.behavior_type = BehaviorName.from_str(name)
             return klass
 
         return decorator
