@@ -403,3 +403,6 @@ class Env(gym.Wrapper):
         vx, vy = velocity_cartesian[0], velocity_cartesian[1]
 
         return vx, vy
+
+    def get_env(self):
+        return self.env

@@ -11,6 +11,7 @@ def register_model(name: str):
         if name in _MODEL_REGISTRY:
             raise ValueError(f"Model '{name}' is already registered!")
         _MODEL_REGISTRY[name] = cls
+        print(f"model {name} is registered")
         return cls
 
     return decorator

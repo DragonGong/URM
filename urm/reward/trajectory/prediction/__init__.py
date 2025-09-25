@@ -1,5 +1,5 @@
 from .linear_model import LinearModel
-
+from .idm_model import IDMModel
 from .model_factory import register_model, create_model_from_config, get_model_class
 
 __all__ = [
@@ -7,4 +7,5 @@ __all__ = [
     "register_model",
     "get_model_class",
     "LinearModel",
+    "IDMModel"
 ]
