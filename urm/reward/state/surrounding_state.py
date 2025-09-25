@@ -1,4 +1,5 @@
 from urm.reward.state.car_state import CarState
+from urm.reward.state.idm_state import IDMState
 from urm.reward.state.state import State
 from typing import List, Optional
 
@@ -19,7 +20,8 @@ class SurroundingState(State):
                 continue
             pos = v.position
             vel = v.velocity
-            cars.append(CarState(env=env, x=pos[0], y=pos[1], vx=vel[0], vy=vel[1], **kwargs))
+            cars.append(
+                IDMState(env=env, original_vehicle=v, x=pos[0], y=pos[1], vx=vel[0], vy=vel[1], **kwargs))
         return cls(env=env, cars=cars, **kwargs)
 
     def add_car(self, car: 'CarState'):

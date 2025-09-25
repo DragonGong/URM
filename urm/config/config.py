@@ -70,8 +70,13 @@ class Config:
                 def __init__(self, **kwargs):
                     pass
 
+            class IDMModelConfig:
+                def __init__(self, **kwargs):
+                    pass
+
             def __init__(self, **kwargs):
                 self.linear_model_config = self.LinearModelConfig(**kwargs.get("linear_model_config", {}))
+                self.idm_model_config = self.IDMModelConfig(**kwargs.get("idm_model_config", {}))
 
         class BehaviorSequenceConfig:
             """单个时间步的行为配置"""

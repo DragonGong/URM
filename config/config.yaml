@@ -61,7 +61,7 @@ reward:
   velocity_unit: 20
   risk_max_for_tree: 1
 
-  prediction_model: "linear_model"
+  prediction_model: "idm_model" # linear_model idm_model
   prediction_model_configs:
     linear_model_config: { }
 

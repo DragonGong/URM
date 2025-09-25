@@ -1,0 +1,19 @@
+| 编号 | 节点1 (0-1s)    | 节点2 (1-2s)     | 节点3 (2-3s)     | 行为描述                           |
+| ---- | --------------- | ---------------- | ---------------- | ---------------------------------- |
+| 1    | (Left, Cruise)  | (Keep, SoftAcc)  | (Keep, SoftAcc)  | 左转巡航，后2秒保持轻加速          |
+| 2    | (Right, Cruise) | (Keep, SoftAcc)  | (Keep, SoftAcc)  | 右转巡航，后2秒保持轻加速          |
+| 3    | (Left, Cruise)  | (Left, SoftAcc)  | (Keep, SoftAcc)  | 左转巡航→左转轻加速→保持轻加速     |
+| 4    | (Right, Cruise) | (Right, SoftAcc) | (Keep, SoftAcc)  | 右转巡航→右转轻加速→保持轻加速     |
+| 5    | (Keep, Cruise)  | (Keep, Cruise)   | (Left, SoftAcc)  | 前2秒巡航，第3秒左转轻加速         |
+| 6    | (Keep, Cruise)  | (Keep, Cruise)   | (Right, SoftAcc) | 前2秒巡航，第3秒右转轻加速         |
+| 7    | (Keep, Cruise)  | (Keep, Cruise)   | (Keep, Cruise)   | 3秒保持巡航                        |
+| 8    | (Keep, SoftAcc) | (Keep, SoftAcc)  | (Keep, SoftAcc)  | 3秒保持轻加速                      |
+| 9    | (Keep, SoftDec) | (Keep, SoftDec)  | (Keep, SoftDec)  | 3秒保持轻刹车                      |
+| 10   | (Keep, Cruise)  | (Keep, SoftDec)  | (Keep, SoftDec)  | 第1秒巡航，后2秒轻刹车             |
+| 11   | (Keep, SoftAcc) | (Keep, Cruise)   | (Keep, Cruise)   | 第1秒轻加速，后2秒巡航             |
+| 12   | (Keep, HardDec) | (Keep, Cruise)   | (Keep, Cruise)   | 第1秒重刹车，后2秒巡航             |
+| 13   | (Keep, HardDec) | (Keep, SoftAcc)  | (Keep, SoftAcc)  | 第1秒重刹车，后2秒轻加速           |
+| 14   | (Keep, HardDec) | (Keep, HardDec)  | (Keep, SoftAcc)  | 前2秒重刹车，第3秒轻加速           |
+| 15   | (Keep, SoftAcc) | (Keep, Cruise)   | (Keep, SoftDec)  | 轻加速→巡航→轻刹车（三阶段变化）   |
+| 16   | (Keep, Cruise)  | (Keep, SoftDec)  | (Keep, HardDec)  | 巡航→轻刹车→重刹车（刹车力度递增） |
+| 17   | (Keep, Cruise)  | (Keep, SoftAcc)  | (Keep, HardAcc)  | 巡航→轻加速→重加速（加速力度递增） |

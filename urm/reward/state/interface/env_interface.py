@@ -61,3 +61,6 @@ class EnvInterface(Protocol):
 
     def get_lane_by_id(self, lane_id: Tuple[str, str, int]):
         ...
+
+    def get_env(self):
+        ...
