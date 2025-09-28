@@ -44,7 +44,30 @@ model_config:
   gradient_steps: 1
   target_update_interval: 50
   verbose: 1
-#  tensorboard_log: "highway_dqn/"
+  tensorboard_log: "highway_dqn/"
+
+
+
+
+training:
+  total_timesteps: 100
+  eval_freq: 1000
+  save_dir: "./agent"
+  n_eval_episodes: 20
+#  render_mode: "human" # 不能和其他的图像显示器一起开启
+
+
+
+
+test_config:
+  model_path: "./agent/default_model"
+  render_mode: "human" # 可选: "human", "rgb_array", null
+  test_episodes: 1
+# urm riskmap baseline
+env_wrapper: "riskmap"
+
+
+
 
 reward:
   step_num: 3
@@ -69,6 +92,14 @@ reward:
   fitting_model: "polynomial"
   fitting_model_config:
     polynomial: { }
+
+  riskmap_config:
+    cell_size: 3
+
+  # 可视化配置（riskmap)
+  visualize: false # 是否创建可视化工具实例
+  plt_show: false # 是否通过plt可视化
+
 
   behavior_configs:
     behaviors_list: [ "lateral_left","lateral_right","soft_accel","hard_accel","soft_decel","hard_decel" ]
@@ -244,21 +275,6 @@ reward:
           - lateral: "lateral_keep"
             longitudinal: "hard_accel"
 
-  riskmap_config:
-    cell_size: 3
 
-  # 可视化配置（riskmap)
-  visualize: false # 是否创建可视化工具实例
-  plt_show: false # 是否通过plt可视化
 
-training:
-  total_timesteps: 10000
-  save_dir: "./agent"
-#  render_mode: "human" # 不能和其他的图像显示器一起开启
 
-test_config:
-  model_path: "./agent/default_model"
-  render_mode: "human" # 可选: "human", "rgb_array", null
-  test_episodes: 1
-# urm riskmap baseline
-env_wrapper: "riskmap"

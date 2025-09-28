@@ -11,6 +11,7 @@ from urm.env_wrapper.baseline_env import BaselineEnv
 import highway_env
 
 from urm.env_wrapper.env_factory import make_wrapped_env
+from urm.eval.custom_eval_callback import CustomEvalCallback
 
 # 支持的算法映射
 ALGORITHM_MAP = {
@@ -101,6 +102,16 @@ def train_model(config: Config):
         if hasattr(config.model_config, param) and getattr(config.model_config, param) is not None:
             model_kwargs[param] = getattr(config.model_config, param)
 
+    eval_callback = CustomEvalCallback(
+        env,
+        best_model_save_path=os.path.join(config.training.save_dir, "best_model"),
+        log_path=config.training.save_dir,
+        eval_freq=config.training.eval_freq,  # e.g., 1000 steps
+        n_eval_episodes=config.training.n_eval_episodes,  # 每次评估跑 20 个 episode
+        deterministic=True,
+        render=False,
+    )
+
     print(f"Creating model: {algo_name} with params:")
     pprint.pprint(model_kwargs)
     model = model_class(**model_kwargs)
@@ -109,7 +120,7 @@ def train_model(config: Config):
     pprint.pprint(env.envs[0].unwrapped.config)
 
     print(f"\n🚀 Starting training with {algo_name}...")
-    model.learn(total_timesteps=config.training.total_timesteps,log_interval = 1)
+    model.learn(total_timesteps=config.training.total_timesteps, log_interval=1, callback=eval_callback)
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     model_filename = f"{timestamp}_{algo_name.lower()}_baseline_urm_highway"

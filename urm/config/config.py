@@ -154,6 +154,8 @@ class Config:
             self.total_timesteps = kwargs.get("total_timesteps", 10000)
             self.save_dir = kwargs.get("save_dir", "./agent")
             self.render_mode = kwargs.get("render_mode", None)  # 默认不渲染
+            self.n_eval_episodes = kwargs.get("n_eval_episodes", 20)
+            self.eval_freq = kwargs.get("eval_freq", 1000)
 
     class TestConfig:
         def __init__(self, **kwargs):
