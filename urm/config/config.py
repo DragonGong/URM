@@ -121,6 +121,7 @@ class Config:
             self.r_lateral_w = kwargs.get("r_lateral_w", 0.1)
             self.v2r_w = kwargs.get("v2r_w", 0.1)
             self.baseline_reward_w = kwargs.get("baseline_reward_w", 0)
+            self.custom_reward_w = kwargs.get("custom_reward_w", 0)
 
             # 公式参数：
             self.discount_factor_max = kwargs.get("discount_factor_max", 0.8)

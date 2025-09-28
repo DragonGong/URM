@@ -1,8 +1,8 @@
 env_config:
-#  env_id: "highway-fast-v0"
+  env_id: "highway-fast-v0"
 #  env_id: "merge-v0"
 #  env_id: "roundabout-v0"
-  env_id: "intersection-v1"
+#  env_id: "intersection-v1"
   lanes_count: 4
   vehicles_count: 50
   duration: 400
@@ -54,7 +54,8 @@ reward:
   r_speed_w: 0.2
   r_lateral_w: 0.1
   v2r_w: 0.1
-  baseline_reward_w: 0.5
+  baseline_reward_w: 1
+  custom_reward_w: 1
 
   discount_factor_max: 0.8
   discount_factor_min: 0.2

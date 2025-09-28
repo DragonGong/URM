@@ -1,6 +1,8 @@
 from collections import Counter
 from typing import Optional, Tuple, List
 import matplotlib.pyplot as plt
+import numpy as np
+
 from urm.config import Config
 from urm.reward.reward_meta import RewardMeta
 from urm.reward.riskmap.risk_map import RiskMap
@@ -32,43 +34,49 @@ class RiskMapReward(RewardMeta):
 
     def reward(self, ego_state: EgoState, surrounding_states: SurroundingState, env_condition: EnvInterface,
                baseline_reward, action):
+        print("\n_____________________________________")
         print(f"baseline reward is {baseline_reward}")
         if self.riskmap_manager is None:
-            urm_risk = baseline_reward
+            urm_reward = baseline_reward
         else:
             riskmap_total: RiskMap = self.riskmap_manager.sum_all()
             if self.visualizer is not None:
                 vis_data = riskmap_total.get_visualization_data()
                 self.visualizer.update(vis_data)
             # self.riskmap_manager.plot_all()
-            riskmap_total.plot_pro()
-            # custom = riskmap_total.get_risk_for_car(ego_state, self.riskmap_manager.world_to_local)
+            # riskmap_total.plot_pro()
             action_dict = env_condition.get_action_dict()
-            print(f"action is {action_dict[int(action)]}")
+            # print(f"action is {action_dict[int(action)]}")
             traj_nodes = self.get_tree_nodes_by_action(action, self.riskmap_manager.trajtree, action_dict)
-            print(f"traj node num is {len(traj_nodes)}")
+            # print(f"traj node num is {len(traj_nodes)}")
             # plot_traj_nodes(traj_nodes)
-            plot_traj_nodes_with_counts(traj_nodes)
+            # plot_traj_nodes_with_counts(traj_nodes)
             if traj_nodes is None or len(traj_nodes) <= 0:
                 custom = 0
             else:
                 risk_all, cell_count, riskmap_mask = self.riskmap_manager.get_risk_by_tree(
                     traj_nodes=traj_nodes,
                     risk_map=riskmap_total)
-                riskmap_mask.plot_pro(block=True)
-                print(f"cell count is {cell_count}")
+                # riskmap_mask.plot_pro(block=True)
+                # print(f"cell count is {cell_count}")
                 custom = risk_all / cell_count
-            urm_risk = self.urm_risk(
-                custom_risk=custom,
+            urm_reward = self.urm_reward(
+                custom_reward=self.custom_reward(custom),
                 baseline=baseline_reward)
             print(f"custom_risk is {custom}")
         self.riskmap_manager_create(ego_state=ego_state, surrounding_states=surrounding_states,
                                     env_condition=env_condition)
-        return urm_risk
+        print(f"urm_reward is {urm_reward}")
+        print("_____________________________________\n")
+        return urm_reward
 
-    def urm_risk(self, custom_risk, baseline):
-        return self.config.reward.baseline_reward_w * baseline + (
-                1 - self.config.reward.baseline_reward_w) * custom_risk
+    def urm_reward(self, custom_reward, baseline):
+        reward = self.config.reward.baseline_reward_w * baseline + self.config.reward.custom_reward_w \
+                 * custom_reward
+        return np.clip(reward, 0.0, 1.0)
+
+    def custom_reward(self, custom_risk):
+        return -custom_risk
 
     def riskmap_manager_create(self, ego_state: EgoState, surrounding_states: SurroundingState,
                                env_condition: EnvInterface):

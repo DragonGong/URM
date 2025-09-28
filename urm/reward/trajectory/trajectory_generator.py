@@ -66,9 +66,9 @@ class TrajectoryGenerator:
         #                                                   duration)
         traj_tree = self.traj_tree_generated_by_behavior_collection(root_node=root_node, ego_state=self.ego_state,
                                                                     behaviors=self.behaviors, duration=duration)
-        traj_tree.visualize_plot_nb(show_direction=False)
+        # traj_tree.visualize_plot_nb(show_direction=False)
         traj_tree = self.traj_tree_cut(traj_tree)
-        traj_tree.visualize_plot_nb(show_direction=False)
+        # traj_tree.visualize_plot_nb(show_direction=False)
         return traj_tree
 
     def traj_tree_generated_by_behavior_collection(
