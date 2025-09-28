@@ -1,3 +1,4 @@
+import time
 from collections import Counter
 from typing import Optional, Tuple, List
 import matplotlib.pyplot as plt
@@ -36,6 +37,7 @@ class RiskMapReward(RewardMeta):
                baseline_reward, action):
         print("\n_____________________________________")
         print(f"baseline reward is {baseline_reward}")
+        start_time = time.time()
         if self.riskmap_manager is None:
             urm_reward = baseline_reward
         else:
@@ -63,9 +65,12 @@ class RiskMapReward(RewardMeta):
             urm_reward = self.urm_reward(
                 custom_reward=self.custom_reward(custom),
                 baseline=baseline_reward)
+
             print(f"custom_risk is {custom}")
-        self.riskmap_manager_create(ego_state=ego_state, surrounding_states=surrounding_states,
-                                    env_condition=env_condition)
+        duration_time = time.time() - start_time
+        time_tuple = self.riskmap_manager_create(ego_state=ego_state, surrounding_states=surrounding_states,
+                                                 env_condition=env_condition)
+        print_time_tuple(time_tuple=time_tuple +(duration_time,))
         print(f"urm_reward is {urm_reward}")
         print("_____________________________________\n")
         return urm_reward
@@ -80,18 +85,34 @@ class RiskMapReward(RewardMeta):
 
     def riskmap_manager_create(self, ego_state: EgoState, surrounding_states: SurroundingState,
                                env_condition: EnvInterface):
+        start_time = time.time()
+
         global_state = State(env=env_condition)
+        print(f"global state creation time is {time.time()-start_time}")
+        start_time =time.time()
         generator = TrajectoryGenerator(ego_state, surrounding_states, env_condition=global_state,
                                         behaviors=self.behaviors,
                                         prediction_model=self.prediction_model, config=self.config)
+        print(f"TrajectoryGenerator time is {time.time()-start_time}")
+        start_time = time.time()
         traj = generator.generate_right(
             self.config.reward.step_num,
             self.config.reward.duration)
+        traj_time = time.time() - start_time
+
+        start_time = time.time()
         generator.set_risk_backpropagation(traj)
+
+        backpropagation_time = time.time() - start_time
+        start_time = time.time()
         if self.visualizer is not None:
             traj.visualize()
         self.riskmap_manager = RiskMapManager(config=self.config.reward, trajtree=traj)
         self.riskmap_manager.assign_risk_with_vehicle()
+
+        assign_risk_time = time.time() - start_time
+
+        return (traj_time, backpropagation_time, assign_risk_time)
 
     def get_tree_nodes_by_action(self, action, trajtree: TrajTree, action_dict):
         action_str = action_dict[int(action)]
@@ -208,3 +229,16 @@ def map_action_str_to_behavior(action_str: str) -> List[Tuple[BehaviorName, Beha
             f"不支持的动作字符串: '{action_str}'。"
             f" 支持的动作: ['LANE_LEFT', 'LANE_RIGHT', 'IDLE', 'FASTER', 'SLOWER']"
         )
+
+
+def print_time_tuple(time_tuple):
+    if len(time_tuple) != 4:
+        print("错误：输入元组必须包含4个元素（traj_time, backpropagation_time, assign_risk_time,reward_time）")
+        return
+    traj_time, backpropagation_time, assign_risk_time ,reward_time = time_tuple
+    print(f"时间统计信息：")
+    print(f"  - 轨迹生成时间: {traj_time} s")
+    print(f"  - 反向传播时间: {backpropagation_time} s")
+    print(f"  - 风险分配时间: {assign_risk_time} s")
+    print(f"  - 风险reward计算时间: {reward_time} s")
+

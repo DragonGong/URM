@@ -50,10 +50,10 @@ model_config:
 
 
 training:
-  total_timesteps: 100
-  eval_freq: 1000
+  total_timesteps: 10000
+  eval_freq: 60
   save_dir: "./agent"
-  n_eval_episodes: 20
+  n_eval_episodes: 5
 #  render_mode: "human" # 不能和其他的图像显示器一起开启
 
 

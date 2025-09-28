@@ -102,12 +102,19 @@ def train_model(config: Config):
         if hasattr(config.model_config, param) and getattr(config.model_config, param) is not None:
             model_kwargs[param] = getattr(config.model_config, param)
 
+    algo_name = config.model_config.algorithm
+    task_name = config.env_config.env_id.replace("/", "_")
+    timestamp = datetime.datetime.now().strftime("%m%d_%H%M")
+
+    best_model_name = f"{algo_name}_{task_name}_{timestamp}_best"
+
     eval_callback = CustomEvalCallback(
         env,
         best_model_save_path=os.path.join(config.training.save_dir, "best_model"),
+        best_model_name=best_model_name,
         log_path=config.training.save_dir,
-        eval_freq=config.training.eval_freq,  # e.g., 1000 steps
-        n_eval_episodes=config.training.n_eval_episodes,  # 每次评估跑 20 个 episode
+        eval_freq=config.training.eval_freq,  # e.g., 100 steps
+        n_eval_episodes=config.training.n_eval_episodes,  # 每次评估跑 10 个 episode
         deterministic=True,
         render=False,
     )

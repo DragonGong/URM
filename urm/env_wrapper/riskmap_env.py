@@ -1,3 +1,5 @@
+import time
+
 import gymnasium as gym
 
 from urm.config import Config
@@ -14,6 +16,7 @@ class RiskMapEnv(Env):
         self.last_acceleration = 0.0
 
     def step(self, action):
+        start = time.time()
         obs, base_line_reward, terminated, truncated, info = self.env.step(action)
         if self.config.training.render_mode:
             self.env.render()
@@ -26,6 +29,7 @@ class RiskMapEnv(Env):
             reward = base_line_reward
         else:
             reward = self.reward.reward(ego_state, surrounding_state, self, base_line_reward,action)
+            print(f"the reward calculation time is {time.time()-start}s")
 
         current_speed = env.vehicle.speed
         current_acceleration = env.vehicle.action["acceleration"] if hasattr(env.vehicle, 'action') else 0.0
@@ -41,5 +45,6 @@ class RiskMapEnv(Env):
             "is_success": is_success,
             "on_road": env.vehicle.on_road,
         })
+        print(f"the step last for {time.time()-start}s")
         return obs, reward, terminated, truncated, info
 
