@@ -151,7 +151,7 @@ class Risk:
         try:
             import matplotlib.pyplot as plt
         except ImportError:
-            print("matplotlib 未安装，无法绘图")
+            logging.error("matplotlib 未安装，无法绘图")
             return
 
         times = self.times()

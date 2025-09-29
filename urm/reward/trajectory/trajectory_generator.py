@@ -1,7 +1,7 @@
 import time
 from copy import deepcopy
 from typing import List, Optional, Tuple, Dict
-
+import logging
 from urm.config import Config
 from urm.reward.state.car_state import CarState
 from urm.reward.state.ego_state import EgoState
@@ -30,7 +30,7 @@ class TrajectoryGenerator:
         self.prediction_result: [[Region2D]] = []
         start_time = time.time()
         self.predict_collision_region()
-        print(f"predict_collision_region time is {time.time()-start_time}")
+        logging.debug(f"predict_collision_region time is {time.time()-start_time}")
         self.fitting_algorithm: Fitting = create_fitting_from_config(self.config)
 
     def fitting_edge(self, edge: TrajEdge):
@@ -55,13 +55,14 @@ class TrajectoryGenerator:
         step_num = self.config.reward.step_num
         duration = self.config.reward.duration
 
+        surrounding_cars = self.surrounding_states.get_cars_in_radius(self.ego_state.x,self.ego_state.y,self.config.reward.surrounding_radius)
         for t in range(step_num):
             result = []
-            for car in self.surrounding_states:
+            for car in surrounding_cars:
                 # s = time.time()
                 region = self.prediction_model.predict_region(car, (t + 1) * duration, width=car.vehicle_size.width,
                                                               length=car.vehicle_size.length)
-                # print(f"each car prediction time for 1 s is {time.time()-s}")
+                # logging.debug(f"each car prediction time for 1 s is {time.time()-s}")
                 result.append(region)
             self.prediction_result.append(result)
 
@@ -72,12 +73,12 @@ class TrajectoryGenerator:
         start_time = time.time()
         traj_tree = self.traj_tree_generated_by_behavior_collection(root_node=root_node, ego_state=self.ego_state,
                                                                     behaviors=self.behaviors, duration=duration)
-        print(f"traj_tree_generated_by_behavior_collection duration is {time.time()-start_time}")
+        logging.debug(f"traj_tree_generated_by_behavior_collection duration is {time.time()-start_time}")
         start_time = time.time()
-        # traj_tree.visualize_plot_nb(show_direction=False)
+        # traj_tree.visualize_plot_nb(show_direction=False,block=True)
         traj_tree = self.traj_tree_cut(traj_tree)
-        print(f"traj_tree_cut duration is {time.time()-start_time}")
-        # traj_tree.visualize_plot_nb(show_direction=False)
+        logging.debug(f"traj_tree_cut duration is {time.time()-start_time}")
+        # traj_tree.visualize_plot_nb(show_direction=False,block=True)
         return traj_tree
 
     def traj_tree_generated_by_behavior_collection(

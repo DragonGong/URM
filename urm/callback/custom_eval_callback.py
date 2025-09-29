@@ -1,3 +1,4 @@
+import logging
 import os
 
 from stable_baselines3.common.callbacks import EvalCallback
@@ -134,7 +135,7 @@ class CustomEvalCallback(EvalCallback):
                     )
                     self.model.save(save_path)
                     if self.verbose >= 1:
-                        print(f"New best model ({self.best_metric_fn.__name__}): "
+                        logging.info(f"New best model ({self.best_metric_fn.__name__}): "
                               f"{current_metric:.4f} → saved to {save_path}")
 
         return continue_training

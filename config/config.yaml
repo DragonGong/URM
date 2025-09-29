@@ -51,18 +51,18 @@ model_config:
 
 training:
   total_timesteps: 10000
-  eval_freq: 60
+  eval_freq: 100
   save_dir: "./agent"
-  n_eval_episodes: 5
+  n_eval_episodes: 10
 #  render_mode: "human" # 不能和其他的图像显示器一起开启
 
 
 
 
 test_config:
-  model_path: "./agent/default_model"
+  model_path: "./agent/best_model/DQN_highway-fast-v0_0929_0026_best"
   render_mode: "human" # 可选: "human", "rgb_array", null
-  test_episodes: 1
+  test_episodes: 10
 # urm riskmap baseline
 env_wrapper: "riskmap"
 
@@ -85,6 +85,8 @@ reward:
   velocity_unit: 20
   risk_max_for_tree: 1
 
+  # prediction
+  surrounding_radius: 100
   prediction_model: "idm_model" # linear_model idm_model
   prediction_model_configs:
     linear_model_config: { }

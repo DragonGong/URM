@@ -130,6 +130,8 @@ class Config:
 
             self.risk_max_for_tree = kwargs.get("risk_max_for_tree", 1)  # 如果碰撞直接设的值
 
+            # 预测参数：
+            self.surrounding_radius = kwargs.get("surrounding_radius", 100)
             # 预测模型：
             self.prediction_model = kwargs.get("prediction_model", "linear_model")
 

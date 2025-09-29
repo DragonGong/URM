@@ -1,5 +1,5 @@
 from typing import Dict, Type, Any
-
+import logging
 from urm.config import Config
 from .model import Model
 
@@ -11,7 +11,7 @@ def register_model(name: str):
         if name in _MODEL_REGISTRY:
             raise ValueError(f"Model '{name}' is already registered!")
         _MODEL_REGISTRY[name] = cls
-        print(f"model {name} is registered")
+        logging.info(f"model {name} is registered")
         return cls
 
     return decorator

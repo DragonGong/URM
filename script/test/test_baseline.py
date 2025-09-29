@@ -1,4 +1,5 @@
 import datetime
+import logging
 import os
 import yaml
 import gymnasium as gym
@@ -43,7 +44,7 @@ if __name__ == "__main__":
     model_path = test_config['model_path']
     model = DQN.load(model_path)
 
-    print(f"加载模型: {model_path}")
+    logging.INFO(f"加载模型: {model_path}")
     print("开始测试...")
 
     total_reward = 0

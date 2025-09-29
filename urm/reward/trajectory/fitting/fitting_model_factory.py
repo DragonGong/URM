@@ -2,7 +2,7 @@ from typing import Dict, Type, Any
 
 from urm.config import Config
 from .fitting import Fitting  # 注意：确保你已定义或导入 Fitting 基类
-
+import logging
 _FITTING_REGISTRY: Dict[str, Type[Fitting]] = {}
 
 

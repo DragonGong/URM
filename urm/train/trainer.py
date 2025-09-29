@@ -1,3 +1,6 @@
+import logging
+
+from stable_baselines3.common.callbacks import CallbackList
 import os
 import datetime
 import pprint
@@ -6,12 +9,13 @@ import gymnasium as gym
 from stable_baselines3 import DQN, PPO, A2C
 from stable_baselines3.common.vec_env import DummyVecEnv
 
+from urm.callback.progress_bar_callback import ProgressBarCallback
 from urm.config import Config
 from urm.env_wrapper.baseline_env import BaselineEnv
 import highway_env
 
 from urm.env_wrapper.env_factory import make_wrapped_env
-from urm.eval.custom_eval_callback import CustomEvalCallback
+from urm.callback.custom_eval_callback import CustomEvalCallback
 
 # 支持的算法映射
 ALGORITHM_MAP = {
@@ -118,16 +122,17 @@ def train_model(config: Config):
         deterministic=True,
         render=False,
     )
-
-    print(f"Creating model: {algo_name} with params:")
+    progress_bar_callback = ProgressBarCallback(total_timesteps=config.training.total_timesteps)
+    callback_list = CallbackList([eval_callback, progress_bar_callback])
+    logging.info(f"Creating model: {algo_name} with params:")
     pprint.pprint(model_kwargs)
     model = model_class(**model_kwargs)
 
-    print("\nEnvironment Config:")
+    logging.info("Environment Config:")
     pprint.pprint(env.envs[0].unwrapped.config)
 
-    print(f"\n🚀 Starting training with {algo_name}...")
-    model.learn(total_timesteps=config.training.total_timesteps, log_interval=1, callback=eval_callback)
+    logging.info(f"🚀 Starting training with {algo_name}...")
+    model.learn(total_timesteps=config.training.total_timesteps, log_interval=1, callback=callback_list)
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     model_filename = f"{timestamp}_{algo_name.lower()}_baseline_urm_highway"
@@ -135,5 +140,5 @@ def train_model(config: Config):
     os.makedirs(config.training.save_dir, exist_ok=True)
     model.save(save_path)
 
-    print(f"✅ Model saved to: {save_path}")
+    logging.info(f"✅ Model saved to: {save_path}")
     return model, save_path

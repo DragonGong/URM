@@ -8,13 +8,13 @@ from urm.reward.state.car_state import CarState
 from urm.reward.state.utils.position import Position
 from urm.reward.state.interface.env_interface import EnvInterface
 import highway_env
-
+import logging
 
 class Env(gym.Wrapper):
     def __init__(self, env, config: Config, **kwargs):
         super().__init__(env)
         self.config = config
-        print(f"get_road_width_info :{self.get_road_width_info()}")
+        logging.info(f"get_road_width_info :{self.get_road_width_info()}")
 
     def get_action_dict(self):
         if hasattr(self.env.unwrapped.action_type, "actions"):
@@ -94,7 +94,7 @@ class Env(gym.Wrapper):
         length, width, heading = length, width, direction
         corners = self._vehicle_corners(cx, cy, length, width, heading)
 
-        # print(f"get_road_width_info :{self.get_road_width_info()}")
+        # logging.info(f"get_road_width_info :{self.get_road_width_info()}")
         # 检查矩形四个角是否至少有一个点在任意 lane 内
         for corner in corners:
             for lane in road.network.lanes_list():
