@@ -96,7 +96,7 @@ class CustomEvalCallback(EvalCallback):
                 episode_speeds.append(np.mean(ep_speeds) if ep_speeds else 0.0)
                 episode_jerks.append(np.mean(ep_jerks) if ep_jerks else 0.0)
                 episode_successes.append(success)
-                episode_rewards.append(ep_reward)
+                episode_rewards.append(ep_reward)  # 一个episode累计的reward
 
             # Compute metrics
             avg_collision_rate = np.mean(episode_crashes)
