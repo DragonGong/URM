@@ -17,8 +17,10 @@ class RiskMapEnv(Env):
         self.last_acceleration = 0.0
 
     def step(self, action):
+        original_start = time.time()
         start = time.time()
         obs, base_line_reward, terminated, truncated, info = self.env.step(action)
+        logging.debug("\n\n\n")
         logging.debug(f"the baseline step time consuming is {time.time()-start}s")
         start = time.time()
         if self.config.training.render_mode:
@@ -52,6 +54,6 @@ class RiskMapEnv(Env):
             "is_success": is_success,
             "on_road": env.vehicle.on_road,
         })
-        logging.debug(f"the step last for {time.time()-start}s")
+        logging.debug(f"the step last for {time.time()-original_start}s")
         return obs, reward, terminated, truncated, info
 
