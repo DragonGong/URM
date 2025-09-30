@@ -121,6 +121,7 @@ class Config:
             self.r_lateral_w = kwargs.get("r_lateral_w", 0.1)
             self.v2r_w = kwargs.get("v2r_w", 0.1)
             self.baseline_reward_w = kwargs.get("baseline_reward_w", 0)
+            self.custom_reward_w = kwargs.get("custom_reward_w", 0)
 
             # 公式参数：
             self.discount_factor_max = kwargs.get("discount_factor_max", 0.8)
@@ -129,6 +130,8 @@ class Config:
 
             self.risk_max_for_tree = kwargs.get("risk_max_for_tree", 1)  # 如果碰撞直接设的值
 
+            # 预测参数：
+            self.surrounding_radius = kwargs.get("surrounding_radius", 100)
             # 预测模型：
             self.prediction_model = kwargs.get("prediction_model", "linear_model")
 
@@ -153,6 +156,8 @@ class Config:
             self.total_timesteps = kwargs.get("total_timesteps", 10000)
             self.save_dir = kwargs.get("save_dir", "./agent")
             self.render_mode = kwargs.get("render_mode", None)  # 默认不渲染
+            self.n_eval_episodes = kwargs.get("n_eval_episodes", 20)
+            self.eval_freq = kwargs.get("eval_freq", 1000)
 
     class TestConfig:
         def __init__(self, **kwargs):

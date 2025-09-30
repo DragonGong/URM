@@ -1,10 +1,15 @@
+import logging
+
 import yaml
 from urm.train import train_model
 from urm.config import Config
 import argparse
 import matplotlib
+from urm import setup_logging, setup_logging_without_conf
 
 matplotlib.use('TkAgg')  # 在导入 pyplot 前设置后端
+
+
 # matplotlib.use('MacOSX')
 
 
@@ -23,10 +28,12 @@ if __name__ == "__main__":
                         type=str,
                         default="config/config.yaml",
                         help='配置文件 config.yaml 的路径（默认: config/config.yaml）')
-
+    # parser.add_argument('-l', "--log", type=str, default="config/logging.conf",
+    #                     help="logging 配置文件，默认路径：config/logging.conf")
     # 解析命令行参数
     args = parser.parse_args()
-
     # 加载配置并训练模型
+    setup_logging_without_conf(log_dir='log', log_name_prefix="app", console_level=logging.INFO,
+                               file_level=logging.DEBUG)
     config = load_config_as_object(args.config)
     train_model(config)

@@ -4,6 +4,7 @@ from typing import Dict, Type, List
 from urm.config import Config
 from urm.reward.trajectory.behavior import Behavior
 from .constant import BehaviorName
+import logging
 
 
 class BehaviorFactory:
@@ -53,7 +54,7 @@ class BehaviorFactory:
             if name in self._registry:
                 instances.append(self._registry[name](self.config.behavior_configs))
             else:
-                print(f"Warning: Behavior '{name}' 配置了但未注册")
+                logging.warning(f"Warning: Behavior '{name}' 配置了但未注册")
         return instances
 
     def create_behavioral_combination(self, lateral_name: str, longitudinal_name: str) -> 'BehavioralCombination':

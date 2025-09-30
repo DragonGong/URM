@@ -1,8 +1,8 @@
 env_config:
-#  env_id: "highway-fast-v0"
+  env_id: "highway-fast-v0"
 #  env_id: "merge-v0"
 #  env_id: "roundabout-v0"
-  env_id: "intersection-v1"
+#  env_id: "intersection-v1"
   lanes_count: 4
   vehicles_count: 50
   duration: 400
@@ -44,7 +44,30 @@ model_config:
   gradient_steps: 1
   target_update_interval: 50
   verbose: 1
-#  tensorboard_log: "highway_dqn/"
+  tensorboard_log: "highway_dqn/"
+
+
+
+
+training:
+  total_timesteps: 10000
+  eval_freq: 100
+  save_dir: "./agent"
+  n_eval_episodes: 10
+#  render_mode: "human" # 不能和其他的图像显示器一起开启
+
+
+
+
+test_config:
+  model_path: "./agent/best_model/DQN_highway-fast-v0_0929_0026_best"
+  render_mode: "human" # 可选: "human", "rgb_array", null
+  test_episodes: 10
+# urm riskmap baseline
+env_wrapper: "riskmap"
+
+
+
 
 reward:
   step_num: 3
@@ -54,13 +77,16 @@ reward:
   r_speed_w: 0.2
   r_lateral_w: 0.1
   v2r_w: 0.1
-  baseline_reward_w: 0.5
+  baseline_reward_w: 1
+  custom_reward_w: 1
 
   discount_factor_max: 0.8
   discount_factor_min: 0.2
   velocity_unit: 20
   risk_max_for_tree: 1
 
+  # prediction
+  surrounding_radius: 100
   prediction_model: "idm_model" # linear_model idm_model
   prediction_model_configs:
     linear_model_config: { }
@@ -68,6 +94,14 @@ reward:
   fitting_model: "polynomial"
   fitting_model_config:
     polynomial: { }
+
+  riskmap_config:
+    cell_size: 3
+
+  # 可视化配置（riskmap)
+  visualize: false # 是否创建可视化工具实例
+  plt_show: false # 是否通过plt可视化
+
 
   behavior_configs:
     behaviors_list: [ "lateral_left","lateral_right","soft_accel","hard_accel","soft_decel","hard_decel" ]
@@ -243,21 +277,6 @@ reward:
           - lateral: "lateral_keep"
             longitudinal: "hard_accel"
 
-  riskmap_config:
-    cell_size: 3
 
-  # 可视化配置（riskmap)
-  visualize: false # 是否创建可视化工具实例
-  plt_show: false # 是否通过plt可视化
 
-training:
-  total_timesteps: 10000
-  save_dir: "./agent"
-#  render_mode: "human" # 不能和其他的图像显示器一起开启
 
-test_config:
-  model_path: "./agent/default_model"
-  render_mode: "human" # 可选: "human", "rgb_array", null
-  test_episodes: 1
-# urm riskmap baseline
-env_wrapper: "riskmap"

@@ -3,7 +3,7 @@ import datetime
 import gymnasium as gym
 from stable_baselines3 import DQN, PPO, A2C
 from stable_baselines3.common.vec_env import DummyVecEnv
-
+import logging
 from urm.config.config import Config
 from urm.env_wrapper.env_factory import make_wrapped_env
 
@@ -52,10 +52,10 @@ def test_model(config):
         raise ValueError(f"无法识别算法，请检查配置或模型文件名。支持: {list(ALGORITHM_MAP.keys())}")
 
     model_class = ALGORITHM_MAP[algo_name]
-    print(f"📂 加载模型: {model_path} (算法: {algo_name})")
+    logging.info(f"📂 加载模型: {model_path} (算法: {algo_name})")
     model = model_class.load(model_path)
 
-    print("▶️ 开始测试...")
+    logging.info("▶️ 开始测试...")
     total_reward = 0
 
     for episode in range(test_config.test_episodes):
@@ -70,11 +70,11 @@ def test_model(config):
                 test_env.render()
             episode_reward += reward[0]
             step += 1
-        print(f"✅ Episode {episode + 1} | 步数: {step} | 总奖励: {episode_reward:.2f}")
+        logging.info(f"✅ Episode {episode + 1} | 步数: {step} | 总奖励: {episode_reward:.2f}")
         total_reward += episode_reward
 
     avg_reward = total_reward / test_config.test_episodes
-    print(f"📈 平均奖励: {avg_reward:.2f}")
+    logging.info(f"📈 平均奖励: {avg_reward:.2f}")
 
     test_env.close()
     return avg_reward

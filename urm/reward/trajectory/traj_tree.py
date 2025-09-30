@@ -227,7 +227,8 @@ class TrajTree:
             show_legend=True,
             show_direction=True,
             dpi=100,
-            fig_id="traj_tree_fig"
+            fig_id="traj_tree_fig",
+            block = False
     ):
         """
         非阻塞可视化：自动关闭旧窗口，不阻塞主线程。
@@ -307,7 +308,7 @@ class TrajTree:
         fig.canvas.draw_idle()
         fig.canvas.flush_events()
 
-        plt.show(block=False)
+        plt.show(block=block)
         plt.draw()
         plt.pause(0.01)  # 确保窗口弹出
 
@@ -356,9 +357,9 @@ if __name__ == "__main__":
         show_direction=True,
         title="Second Plot (Auto Replaced)"
     )
-    print("程序继续运行中... 按 Ctrl+C 退出")
+    logging.debug("程序继续运行中... 按 Ctrl+C 退出")
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        print("退出程序")
+        logging.info("退出程序")
