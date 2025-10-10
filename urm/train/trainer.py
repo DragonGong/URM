@@ -13,7 +13,7 @@ from urm.callback.progress_bar_callback import ProgressBarCallback
 from urm.config import Config
 from urm.env_wrapper.baseline_env import BaselineEnv
 import highway_env
-
+from urm import utils
 from urm.env_wrapper.env_factory import make_wrapped_env
 from urm.callback.custom_eval_callback import CustomEvalCallback
 
@@ -99,7 +99,13 @@ def train_model(config: Config):
         if hasattr(config.model_config, param) and getattr(config.model_config, param) is not None:
             value = getattr(config.model_config, param)
             if param == "tensorboard_log" and value:
-                value = os.path.join(value, datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+                time_name = datetime.datetime.now().strftime("%m-%d_%H-%M-%S")
+                time_name += "_" + config.env_config.env_id + "_" + config.model_config.algorithm
+                if config.reward.is_baseline:
+                    time_name = time_name + "_baseline"
+                value = os.path.join(value, time_name)
+                os.makedirs(value, exist_ok=True)
+                utils.write_config_to_file(config, os.path.join(value, "config.txt"))
             model_kwargs[param] = value
 
     for param in algo_specific_params.get(algo_name, []):
@@ -116,11 +122,12 @@ def train_model(config: Config):
         env,
         best_model_save_path=os.path.join(config.training.save_dir, "best_model"),
         best_model_name=best_model_name,
-        log_path=config.training.save_dir,
-        eval_freq=config.training.eval_freq,  # e.g., 100 steps
-        n_eval_episodes=config.training.n_eval_episodes,  # 每次评估跑 10 个 episode
+        log_path=config.training.save_dir,  # todo: 未知参数
+        eval_freq=config.training.eval_freq,  # e.g., 默认 100 steps
+        n_eval_episodes=config.training.n_eval_episodes,  # 默认 每次评估跑 10 个 episode
         deterministic=True,
         render=False,
+        config=config,
     )
     progress_bar_callback = ProgressBarCallback(total_timesteps=config.training.total_timesteps)
     callback_list = CallbackList([eval_callback, progress_bar_callback])
@@ -135,10 +142,10 @@ def train_model(config: Config):
     model.learn(total_timesteps=config.training.total_timesteps, log_interval=1, callback=callback_list)
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    model_filename = f"{timestamp}_{algo_name.lower()}_baseline_urm_highway"
+    model_filename = f"{timestamp}_{algo_name.lower()}_{task_name}"
     save_path = os.path.join(config.training.save_dir, model_filename)
     os.makedirs(config.training.save_dir, exist_ok=True)
     model.save(save_path)
-
+    utils.write_config_to_file(config, save_path + ".txt")
     logging.info(f"✅ Model saved to: {save_path}")
     return model, save_path

@@ -1,6 +1,6 @@
 env_config:
-  env_id: "highway-fast-v0"
-#  env_id: "merge-v0"
+#  env_id: "highway-fast-v0"
+  env_id: "merge-v0"
 #  env_id: "roundabout-v0"
 #  env_id: "intersection-v1"
   lanes_count: 4
@@ -60,7 +60,7 @@ training:
 
 
 test_config:
-  model_path: "./agent/best_model/DQN_highway-fast-v0_0929_0026_best"
+  model_path: "agent/best_model/DQN_highway-fast-v0_1001_1152_best"
   render_mode: "human" # 可选: "human", "rgb_array", null
   test_episodes: 10
 # urm riskmap baseline
@@ -70,6 +70,7 @@ env_wrapper: "riskmap"
 
 
 reward:
+  is_baseline: 1
   step_num: 3
   duration: 1
   desired_speed: 20
@@ -78,7 +79,7 @@ reward:
   r_lateral_w: 0.1
   v2r_w: 0.1
   baseline_reward_w: 1
-  custom_reward_w: 1
+  custom_reward_w: 0
 
   discount_factor_max: 0.8
   discount_factor_min: 0.2
