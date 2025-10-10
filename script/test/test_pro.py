@@ -1,5 +1,7 @@
 import argparse
+import logging
 
+from urm import setup_logging_without_conf
 from urm.config.config import Config
 from urm.test import test_model
 
@@ -25,6 +27,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # 加载配置并训练模型
+    setup_logging_without_conf(log_dir='log', log_name_prefix="test", console_level=logging.INFO,
+                               file_level=logging.DEBUG)
+
     config_dict = load_config(args.config)
     config = Config(config_dict)
     test_model(config)
