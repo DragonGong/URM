@@ -1,5 +1,8 @@
+from urm.callback.best_reward_callback import BestRewardCallback
+from urm.callback.collision_rate_callback import CollisionRateCallback
+from urm.log import record
 import logging
-
+from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CallbackList
 import os
 import datetime
@@ -39,6 +42,7 @@ def make_env(config, render_mode=None):
     env.unwrapped.configure(env_config.__dict__)  # 传入字典配置
     env.reset()
     env = make_wrapped_env(env, config)
+    env = Monitor(env)
     return env
 
 
@@ -49,7 +53,6 @@ def train_model(config: Config):
     :param config: Config 实例（包含 env_config, model_config, training 等）
     """
     env = DummyVecEnv([lambda: make_env(config, config.training.render_mode)])
-
     algo_name = config.model_config.algorithm  # 如 "DQN", "PPO"
     if algo_name not in ALGORITHM_MAP:
         raise ValueError(f"Unsupported algorithm: {algo_name}. Supported: {list(ALGORITHM_MAP.keys())}")
@@ -118,19 +121,21 @@ def train_model(config: Config):
 
     best_model_name = f"{algo_name}_{task_name}_{timestamp}_best"
 
-    eval_callback = CustomEvalCallback(
-        env,
-        best_model_save_path=os.path.join(config.training.save_dir, "best_model"),
-        best_model_name=best_model_name,
-        log_path=config.training.save_dir,  # todo: 未知参数
-        eval_freq=config.training.eval_freq,  # e.g., 默认 100 steps
-        n_eval_episodes=config.training.n_eval_episodes,  # 默认 每次评估跑 10 个 episode
-        deterministic=True,
-        render=False,
-        config=config,
-    )
+    # eval_callback = CustomEvalCallback(
+    #     env,
+    #     best_model_save_path=os.path.join(config.training.save_dir, "best_model"),
+    #     best_model_name=best_model_name,
+    #     log_path=config.training.save_dir,  # todo: 未知参数
+    #     eval_freq=config.training.eval_freq,  # e.g., 默认 100 steps
+    #     n_eval_episodes=config.training.n_eval_episodes,  # 默认 每次评估跑 10 个 episode
+    #     deterministic=True,
+    #     render=False,
+    #     config=config,
+    # )
     progress_bar_callback = ProgressBarCallback(total_timesteps=config.training.total_timesteps)
-    callback_list = CallbackList([eval_callback, progress_bar_callback])
+    callback_list = CallbackList([progress_bar_callback, CollisionRateCallback(window_size=100),
+                                  BestRewardCallback(save_path=os.path.join(config.training.save_dir, "best_model"),
+                                                     window_size=100, verbose=1)])
     logging.info(f"Creating model: {algo_name} with params:")
     pprint.pprint(model_kwargs)
     model = model_class(**model_kwargs)

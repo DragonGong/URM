@@ -51,6 +51,8 @@ class RiskMapReward(RewardMeta):
             # logging.debug(f"action is {action_dict[int(action)]}")
             traj_nodes = self.get_tree_nodes_by_action(action, self.riskmap_manager.trajtree, action_dict)
             # logging.debug(f"traj node num is {len(traj_nodes)}")
+
+            # 绘制action对应的节点
             # plot_traj_nodes(traj_nodes)
             # plot_traj_nodes_with_counts(traj_nodes)
             if traj_nodes is None or len(traj_nodes) <= 0:
