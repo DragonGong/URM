@@ -104,7 +104,7 @@ def train_model(config: Config):
             if param == "tensorboard_log" and value:
                 time_name = datetime.datetime.now().strftime("%m-%d_%H-%M-%S")
                 time_name += "_" + config.env_config.env_id + "_" + config.model_config.algorithm
-                if config.reward.is_baseline:
+                if config.reward.custom_reward_w == 0:
                     time_name = time_name + "_baseline"
                 value = os.path.join(value, time_name)
                 os.makedirs(value, exist_ok=True)
@@ -132,9 +132,14 @@ def train_model(config: Config):
     #     render=False,
     #     config=config,
     # )
+
+    if config.reward.custom_reward_w == 0:
+        task_name = task_name + "_baseline"
+
     progress_bar_callback = ProgressBarCallback(total_timesteps=config.training.total_timesteps)
     callback_list = CallbackList([progress_bar_callback, CollisionRateCallback(window_size=100),
                                   BestRewardCallback(save_path=os.path.join(config.training.save_dir, "best_model"),
+                                                     model_name=f"{timestamp}_{algo_name.lower()}_{task_name}",
                                                      window_size=100, verbose=1)])
     logging.info(f"Creating model: {algo_name} with params:")
     pprint.pprint(model_kwargs)

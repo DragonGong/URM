@@ -111,7 +111,6 @@ class Config:
 
         def __init__(self, **kwargs):
             # 轨迹树建立参数
-            self.is_baseline = kwargs.get("is_baseline", False)
             self.step_num = kwargs.get("step_num", 3)
             self.duration = kwargs.get("duration", 1)  # 单位是秒
 
