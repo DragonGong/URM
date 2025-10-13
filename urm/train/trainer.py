@@ -115,6 +115,8 @@ def train_model(config: Config):
         if hasattr(config.model_config, param) and getattr(config.model_config, param) is not None:
             model_kwargs[param] = getattr(config.model_config, param)
 
+    set_desired_exploration_steps(model_kwargs, config)
+
     algo_name = config.model_config.algorithm
     task_name = config.env_config.env_id.replace("/", "_")
     timestamp = datetime.datetime.now().strftime("%m%d_%H%M")
@@ -159,3 +161,9 @@ def train_model(config: Config):
     utils.write_config_to_file(config, save_path + ".txt")
     logging.info(f"✅ Model saved to: {save_path}")
     return model, save_path
+
+
+def set_desired_exploration_steps(model_kwargs, config: Config):
+    if config.model_config.desired_exploration_steps is not None:
+        exploration_fraction = config.model_config.desired_exploration_steps / config.training.total_timesteps
+        model_kwargs["exploration_fraction"] = exploration_fraction

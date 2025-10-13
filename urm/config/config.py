@@ -53,6 +53,7 @@ class Config:
             self.target_update_interval = kwargs.get("target_update_interval", 50)
             self.verbose = kwargs.get("verbose", 1)
             self.tensorboard_log = kwargs.get("tensorboard_log", None)
+            self.desired_exploration_steps = kwargs.get("desired_exploration_steps",None)
 
     class RewardConfig:
 

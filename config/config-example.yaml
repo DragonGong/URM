@@ -45,7 +45,7 @@ model_config:
   target_update_interval: 50
   verbose: 1
   tensorboard_log: "highway_dqn/"
-
+#  desired_exploration_steps: 5000
 
 
 
