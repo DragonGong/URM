@@ -1,6 +1,5 @@
 from urm.callback.best_reward_callback import BestRewardCallback
 from urm.callback.collision_rate_callback import CollisionRateCallback
-from urm.log import record
 import logging
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CallbackList
@@ -98,15 +97,25 @@ def train_model(config: Config):
         ],
     }
 
+    algo_name = config.model_config.algorithm
+    task_name = config.env_config.env_id.replace("/", "_")
+    timestamp = datetime.datetime.now().strftime("%m%d_%H%M")
+
+    if config.reward.version == 0:
+        if config.reward.custom_reward_w == 0:
+            task_name = task_name + "_baseline"
+        task_name = task_name + "_version_0"
+    elif config.reward.version == 1:
+        if config.reward.baseline_reward_w == 1 and config.reward.risk_reward_w == 0:
+            task_name = task_name + "_baseline"
+        task_name = task_name + "_version_1"
+
     for param in common_params:
         if hasattr(config.model_config, param) and getattr(config.model_config, param) is not None:
             value = getattr(config.model_config, param)
             if param == "tensorboard_log" and value:
-                time_name = datetime.datetime.now().strftime("%m-%d_%H-%M-%S")
-                time_name += "_" + config.env_config.env_id + "_" + config.model_config.algorithm
-                if config.reward.custom_reward_w == 0:
-                    time_name = time_name + "_baseline"
-                value = os.path.join(value, time_name)
+                remark = timestamp + "_" + task_name + "_" + algo_name
+                value = os.path.join(value, remark)
                 os.makedirs(value, exist_ok=True)
                 utils.write_config_to_file(config, os.path.join(value, "config.txt"))
             model_kwargs[param] = value
@@ -116,10 +125,6 @@ def train_model(config: Config):
             model_kwargs[param] = getattr(config.model_config, param)
 
     set_desired_exploration_steps(model_kwargs, config)
-
-    algo_name = config.model_config.algorithm
-    task_name = config.env_config.env_id.replace("/", "_")
-    timestamp = datetime.datetime.now().strftime("%m%d_%H%M")
 
     best_model_name = f"{algo_name}_{task_name}_{timestamp}_best"
 
@@ -134,9 +139,6 @@ def train_model(config: Config):
     #     render=False,
     #     config=config,
     # )
-
-    if config.reward.custom_reward_w == 0:
-        task_name = task_name + "_baseline"
 
     progress_bar_callback = ProgressBarCallback(total_timesteps=config.training.total_timesteps)
     callback_list = CallbackList([progress_bar_callback, CollisionRateCallback(window_size=100),

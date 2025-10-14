@@ -34,7 +34,10 @@ class RiskMapEnv(Env):
         logging.debug(f"the state transfer time consuming is {time.time() - start}s")
         start = time.time()
 
-        if self.config.reward.baseline_reward_w == 1 and self.config.reward.custom_reward_w == 0:
+        if (self.config.reward.version == 0 and (
+                self.config.reward.baseline_reward_w == 1 and self.config.reward.custom_reward_w == 0)) \
+                or (self.config.reward.version == 1 and (
+                self.config.reward.baseline_reward_w == 1 and self.config.reward.risk_reward_w == 0)):
             reward = base_line_reward
         else:
             reward = self.reward.reward(ego_state, surrounding_state, self, base_line_reward, action)
