@@ -12,6 +12,7 @@ from stable_baselines3 import DQN, PPO, A2C
 from stable_baselines3.common.vec_env import DummyVecEnv
 
 from urm.callback.progress_bar_callback import ProgressBarCallback
+from urm.callback.risk_record_callback import RiskRecordCallback
 from urm.config import Config
 from urm.env_wrapper.baseline_env import BaselineEnv
 import highway_env
@@ -110,12 +111,12 @@ def train_model(config: Config):
             task_name = task_name + "_baseline"
         task_name = task_name + "_version_1"
 
+    remark_name = timestamp + "_" + task_name + "_" + algo_name
     for param in common_params:
         if hasattr(config.model_config, param) and getattr(config.model_config, param) is not None:
             value = getattr(config.model_config, param)
             if param == "tensorboard_log" and value:
-                remark = timestamp + "_" + task_name + "_" + algo_name
-                value = os.path.join(value, remark)
+                value = os.path.join(value, remark_name)
                 os.makedirs(value, exist_ok=True)
                 utils.write_config_to_file(config, os.path.join(value, "config.txt"))
             model_kwargs[param] = value
@@ -140,11 +141,12 @@ def train_model(config: Config):
     #     config=config,
     # )
 
-    progress_bar_callback = ProgressBarCallback(total_timesteps=config.training.total_timesteps)
+    progress_bar_callback = ProgressBarCallback(total_timesteps=config.training.total_timesteps,name=remark_name)
+    risk_record_callback = RiskRecordCallback()
     callback_list = CallbackList([progress_bar_callback, CollisionRateCallback(window_size=100),
                                   BestRewardCallback(save_path=os.path.join(config.training.save_dir, "best_model"),
                                                      model_name=f"{timestamp}_{algo_name.lower()}_{task_name}",
-                                                     window_size=100, verbose=1)])
+                                                     window_size=100, verbose=1), risk_record_callback])
     logging.info(f"Creating model: {algo_name} with params:")
     pprint.pprint(model_kwargs)
     model = model_class(**model_kwargs)
