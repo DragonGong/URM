@@ -36,7 +36,6 @@ class BestRewardCallback(BaseCallback):
                         if self.verbose > 0:
                             logging.info(
                                 f"🎉 New best mean reward: {current_mean_reward:.2f} - Model saved to {self.save_path}")
-
                     self.logger.record("train/best_mean_reward", self.best_mean_reward)
                     self.logger.record("train/current_mean_reward", current_mean_reward)
 

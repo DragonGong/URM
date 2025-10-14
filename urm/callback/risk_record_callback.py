@@ -12,16 +12,22 @@ class RiskRecordCallback(BaseCallback):
         self.risk_buffer = deque(maxlen=window_size)
         self.total_risk_sum = 0.0
         self.episode_count = 0
+        self.risk_list = []
 
     def _on_step(self) -> bool:
         dones = self.locals.get("dones", [])
         infos = self.locals.get("infos", [])
 
         for done, info in zip(dones, infos):
+            self.risk_list.append(info.get("risk", 0.0))
             if done:
-                episode_risk = info.get("risk", 0.0)
+                if len(self.risk_list) == 0:
+                    logging.error("risk list length is 0")
+                    episode_risk = 0
+                else:
+                    episode_risk = sum(self.risk_list) / len(self.risk_list)
+                self.risk_list = []
                 self.risk_buffer.append(episode_risk)
-                self.total_risk_sum += episode_risk
                 self.episode_count += 1
 
                 current_mean_risk = sum(self.risk_buffer) / len(self.risk_buffer)
