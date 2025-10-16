@@ -235,7 +235,7 @@ class Polynomial(Fitting):
         vs0, vd0, _ = env.get_frenet_velocity(float(p0[0]), float(p0[1]), float(v0_vec[0]), float(v0_vec[1]), lane_id)
         vsf, vdf, _ = env.get_frenet_velocity(float(pf[0]), float(pf[1]), float(vf_vec[0]),
                                               float(vf_vec[1]), lane_id) if np.linalg.norm(vf_vec) > 1e-8 else (
-        vs0, vd0)
+            vs0, vd0, _)
 
         # 假设加速度为0（和原方法一致）
         as0 = 0.0
@@ -314,7 +314,7 @@ class Polynomial(Fitting):
 
             # 转换速度：Frenet 速度 → 笛卡尔速度
             try:
-                vx, vy = env.frenet_velocity_to_cartesian(float(x), float(y), float(s_dot), float(d_dot),lane_id)
+                vx, vy = env.frenet_velocity_to_cartesian(float(x), float(y), float(s_dot), float(d_dot), lane_id)
             except ValueError as e:
                 # fallback: 如果转换失败，用位置差分近似（不推荐，仅保底）
                 if i > 0:

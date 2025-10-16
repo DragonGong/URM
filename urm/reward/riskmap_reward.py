@@ -1,6 +1,6 @@
 import time
 from collections import Counter
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Union, Sequence
 import matplotlib.pyplot as plt
 import numpy as np
 import logging
@@ -18,6 +18,18 @@ from urm.reward.trajectory.traj_tree import TrajTree
 from urm.reward.trajectory.trajectory_generator import TrajectoryGenerator
 from urm.reward.trajectory.prediction import *
 from urm.reward.utils.riskmap_visualizer import RiskMapVisualizer
+
+Vector = Union[np.ndarray, Sequence[float]]
+Matrix = Union[np.ndarray, Sequence[Sequence[float]]]
+Interval = Union[
+    np.ndarray,
+    Tuple[Vector, Vector],
+    Tuple[Matrix, Matrix],
+    Tuple[float, float],
+    List[Vector],
+    List[Matrix],
+    List[float],
+]
 
 
 class RiskMapReward(RewardMeta):
@@ -37,6 +49,7 @@ class RiskMapReward(RewardMeta):
                baseline_reward, action):
         logging.debug("_____________________________________")
         logging.debug(f"baseline reward is {baseline_reward}")
+        risk = 0
         start_time = time.time()
         if self.riskmap_manager is None:
             urm_reward = baseline_reward
@@ -51,6 +64,8 @@ class RiskMapReward(RewardMeta):
             # logging.debug(f"action is {action_dict[int(action)]}")
             traj_nodes = self.get_tree_nodes_by_action(action, self.riskmap_manager.trajtree, action_dict)
             # logging.debug(f"traj node num is {len(traj_nodes)}")
+
+            # 绘制action对应的节点
             # plot_traj_nodes(traj_nodes)
             # plot_traj_nodes_with_counts(traj_nodes)
             if traj_nodes is None or len(traj_nodes) <= 0:
@@ -62,23 +77,38 @@ class RiskMapReward(RewardMeta):
                 # riskmap_mask.plot_pro(block=True)
                 # logging.debug(f"cell count is {cell_count}")
                 custom = risk_all / cell_count
-            urm_reward = self.urm_reward(
-                custom_reward=self.custom_reward(custom),
-                baseline=baseline_reward)
-
+            if self.config.reward.version == 0:
+                urm_reward = self.urm_reward(baseline=baseline_reward, custom_reward=custom)
+            else:
+                urm_reward = self.urm_reward_v1(baseline_reward=baseline_reward, risk=custom)
             logging.debug(f"custom_risk is {custom}")
+            risk = custom
         duration_time = time.time() - start_time
         time_tuple = self.riskmap_manager_create(ego_state=ego_state, surrounding_states=surrounding_states,
                                                  env_condition=env_condition)
-        print_time_tuple(time_tuple=time_tuple +(duration_time,))
+        print_time_tuple(time_tuple=time_tuple + (duration_time,))
         logging.debug(f"urm_reward is {urm_reward}")
         logging.debug("_____________________________________\n")
-        return urm_reward
+        return urm_reward,risk
 
     def urm_reward(self, custom_reward, baseline):
         reward = self.config.reward.baseline_reward_w * baseline + self.config.reward.custom_reward_w \
                  * custom_reward
         return np.clip(reward, 0.0, 1.0)
+
+    def urm_reward_v1(self, baseline_reward, risk):
+        b_w = self.config.reward.baseline_reward_w
+        r_w = self.config.reward.risk_reward_w
+        assert b_w != r_w, "baseline_reward_w can be equal to risk_reward_w!"
+        r_raw = r_w * risk + b_w * baseline_reward
+        return _lmap(
+            r_raw,
+            [
+                r_w,
+                b_w,
+            ],
+            [0, 1]
+        )
 
     def custom_reward(self, custom_risk):
         return -custom_risk
@@ -88,12 +118,12 @@ class RiskMapReward(RewardMeta):
         start_time = time.time()
 
         global_state = State(env=env_condition)
-        logging.debug(f"global state creation time is {time.time()-start_time}")
-        start_time =time.time()
+        logging.debug(f"global state creation time is {time.time() - start_time}")
+        start_time = time.time()
         generator = TrajectoryGenerator(ego_state, surrounding_states, env_condition=global_state,
                                         behaviors=self.behaviors,
                                         prediction_model=self.prediction_model, config=self.config)
-        logging.debug(f"TrajectoryGenerator time is {time.time()-start_time}")
+        logging.debug(f"TrajectoryGenerator time is {time.time() - start_time}")
         start_time = time.time()
         traj = generator.generate_right(
             self.config.reward.step_num,
@@ -127,6 +157,11 @@ class RiskMapReward(RewardMeta):
                 all_nodes.extend(edge.discrete_points)
                 all_nodes.extend(child_tree.get_all_nodes_with_edge_nodes())
         return all_nodes
+
+
+def _lmap(v: float, x: Interval, y: Interval) -> float:
+    """Linear map of value v with range x to desired range y."""
+    return float(y[0] + (v - x[0]) * (y[1] - y[0]) / (x[1] - x[0]))
 
 
 def plot_traj_nodes(traj_nodes: List[TrajNode], block=False):
@@ -235,10 +270,9 @@ def print_time_tuple(time_tuple):
     if len(time_tuple) != 4:
         logging.error("错误：输入元组必须包含4个元素（traj_time, backpropagation_time, assign_risk_time,reward_time）")
         return
-    traj_time, backpropagation_time, assign_risk_time ,reward_time = time_tuple
+    traj_time, backpropagation_time, assign_risk_time, reward_time = time_tuple
     logging.debug(f"时间统计信息：")
     logging.debug(f"  - 轨迹生成时间: {traj_time} s")
     logging.debug(f"  - 反向传播时间: {backpropagation_time} s")
     logging.debug(f"  - 风险分配时间: {assign_risk_time} s")
     logging.debug(f"  - 风险reward计算时间: {reward_time} s")
-

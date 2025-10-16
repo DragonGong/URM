@@ -1,11 +1,14 @@
 import logging
 import os
+import pprint
 
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.vec_env import VecEnv, sync_envs_normalization
 import numpy as np
 from typing import Any, Dict, List
 import torch as th
+
+from urm import utils
 
 
 class CustomEvalCallback(EvalCallback):
@@ -21,6 +24,7 @@ class CustomEvalCallback(EvalCallback):
             render=False,
             verbose=1,
             best_metric_fn=None,  # 自定义“best”判定函数
+            config=None
     ):
         super().__init__(
             eval_env,
@@ -40,6 +44,7 @@ class CustomEvalCallback(EvalCallback):
 
         # 初始化 best 指标为 -inf
         self.best_metric_value = -np.inf
+        self.config = config
 
     @staticmethod
     def _default_best_metric_fn(eval_results):
@@ -134,8 +139,10 @@ class CustomEvalCallback(EvalCallback):
                         f"{self.best_model_name}.zip"
                     )
                     self.model.save(save_path)
+                    utils.write_config_to_file(self.config,
+                                               os.path.join(self.best_model_save_path, f"{self.best_model_name}.txt"))
                     if self.verbose >= 1:
                         logging.info(f"New best model ({self.best_metric_fn.__name__}): "
-                              f"{current_metric:.4f} → saved to {save_path}")
+                                     f"{current_metric:.4f} → saved to {save_path}")
 
         return continue_training

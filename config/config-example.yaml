@@ -1,8 +1,10 @@
+# 适用于train_pro.py  train_multi.py
 env_config:
-  env_id: "highway-fast-v0"
+#  env_id: "highway-fast-v0"
 #  env_id: "merge-v0"
 #  env_id: "roundabout-v0"
 #  env_id: "intersection-v1"
+#  env_id: "highway-v0"
   lanes_count: 4
   vehicles_count: 50
   duration: 400
@@ -45,7 +47,7 @@ model_config:
   target_update_interval: 50
   verbose: 1
   tensorboard_log: "highway_dqn/"
-
+#  desired_exploration_steps: 5000
 
 
 
@@ -54,13 +56,15 @@ training:
   eval_freq: 100
   save_dir: "./agent"
   n_eval_episodes: 10
+  seed_list: [0, 10, 20, 30, 40]
+
 #  render_mode: "human" # 不能和其他的图像显示器一起开启
 
 
 
 
 test_config:
-  model_path: "./agent/best_model/DQN_highway-fast-v0_0929_0026_best"
+  model_path: "agent/best_model/DQN_highway-fast-v0_1001_1152_best"
   render_mode: "human" # 可选: "human", "rgb_array", null
   test_episodes: 10
 # urm riskmap baseline
@@ -70,6 +74,8 @@ env_wrapper: "riskmap"
 
 
 reward:
+  reward_version: 1
+  is_baseline: 1
   step_num: 3
   duration: 1
   desired_speed: 20
@@ -78,7 +84,8 @@ reward:
   r_lateral_w: 0.1
   v2r_w: 0.1
   baseline_reward_w: 1
-  custom_reward_w: 1
+  custom_reward_w: 0 # v0 版本reward
+  risk_reward_w: -1 # v1 版本reward 配置
 
   discount_factor_max: 0.8
   discount_factor_min: 0.2

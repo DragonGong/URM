@@ -53,6 +53,7 @@ class Config:
             self.target_update_interval = kwargs.get("target_update_interval", 50)
             self.verbose = kwargs.get("verbose", 1)
             self.tensorboard_log = kwargs.get("tensorboard_log", None)
+            self.desired_exploration_steps = kwargs.get("desired_exploration_steps", None)
 
     class RewardConfig:
 
@@ -110,6 +111,8 @@ class Config:
                 self.cell_size = kwargs.get("cell_size", 0.5)
 
         def __init__(self, **kwargs):
+            # 版本
+            self.version = kwargs.get("reward_version", 0)
             # 轨迹树建立参数
             self.step_num = kwargs.get("step_num", 3)
             self.duration = kwargs.get("duration", 1)  # 单位是秒
@@ -120,8 +123,13 @@ class Config:
             self.r_speed_w = kwargs.get("r_speed_w", 0.2)
             self.r_lateral_w = kwargs.get("r_lateral_w", 0.1)
             self.v2r_w = kwargs.get("v2r_w", 0.1)
+
+            # v0版
             self.baseline_reward_w = kwargs.get("baseline_reward_w", 0)
             self.custom_reward_w = kwargs.get("custom_reward_w", 0)
+
+            # v1版 baseline_reward_w 继续保留
+            self.risk_reward_w = kwargs.get("risk_reward_w", 0)
 
             # 公式参数：
             self.discount_factor_max = kwargs.get("discount_factor_max", 0.8)
@@ -158,6 +166,7 @@ class Config:
             self.render_mode = kwargs.get("render_mode", None)  # 默认不渲染
             self.n_eval_episodes = kwargs.get("n_eval_episodes", 20)
             self.eval_freq = kwargs.get("eval_freq", 1000)
+            self.seed_list = kwargs.get("seed_list",None)
 
     class TestConfig:
         def __init__(self, **kwargs):
