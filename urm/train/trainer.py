@@ -1,3 +1,4 @@
+from urm.utils import Mode
 import multiprocessing as mp
 import sys
 from functools import partial
@@ -87,6 +88,7 @@ def _train_model_wrapper(seed, config, index=0):
 
 
 def train_model(config: Config, seed=None, index=0):
+    config.run_mode = Mode.TRAIN
     """
     训练函数，接收 Config 对象，自动选择算法并训练
 

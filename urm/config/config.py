@@ -177,7 +177,7 @@ class Config:
     def __init__(self, config_dict=None):
         if config_dict is None:
             config_dict = {}
-
+        self.run_mode = None
         # 初始化各个子配置
         self.env_config = self.EnvConfig(**config_dict.get("env_config", {}))
         self.model_config = self.ModelConfig(**config_dict.get("model_config", {}))

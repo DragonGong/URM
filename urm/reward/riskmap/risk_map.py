@@ -72,6 +72,9 @@ class RiskMap:
         return risk_avg
 
     def plot(self, ax=None, title: str = "RiskMap", show_colorbar: bool = True, cmap='hot', interpolation='nearest'):
+        """
+        deprecated
+        """
         risk_avg = self.finalize()
         plt.close("all")
         if ax is None:
