@@ -166,6 +166,7 @@ class Config:
             self.render_mode = kwargs.get("render_mode", None)  # 默认不渲染
             self.n_eval_episodes = kwargs.get("n_eval_episodes", 20)
             self.eval_freq = kwargs.get("eval_freq", 1000)
+            self.seed_list = kwargs.get("seed_list",None)
 
     class TestConfig:
         def __init__(self, **kwargs):
