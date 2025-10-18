@@ -50,11 +50,13 @@ class RiskMapReward(RewardMeta):
         logging.debug("_____________________________________")
         logging.debug(f"baseline reward is {baseline_reward}")
         risk = 0
+        riskmap = None
         start_time = time.time()
         if self.riskmap_manager is None:
             urm_reward = baseline_reward
         else:
             riskmap_total: RiskMap = self.riskmap_manager.sum_all()
+            riskmap = riskmap_total
             if self.visualizer is not None:
                 vis_data = riskmap_total.get_visualization_data()
                 self.visualizer.update(vis_data)
@@ -89,7 +91,7 @@ class RiskMapReward(RewardMeta):
         print_time_tuple(time_tuple=time_tuple + (duration_time,))
         logging.debug(f"urm_reward is {urm_reward}")
         logging.debug("_____________________________________\n")
-        return urm_reward,risk
+        return urm_reward,risk,riskmap
 
     def urm_reward(self, custom_reward, baseline):
         reward = self.config.reward.baseline_reward_w * baseline + self.config.reward.custom_reward_w \

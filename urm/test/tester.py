@@ -1,5 +1,10 @@
 import os
 import datetime
+import time
+
+import cv2
+
+from urm.utils.constant import Mode
 import gymnasium as gym
 from stable_baselines3 import DQN, PPO, A2C
 from stable_baselines3.common.vec_env import DummyVecEnv
@@ -30,6 +35,7 @@ def make_env(config, render_mode=None):
 
 
 def test_model(config):
+    config.run_mode = Mode.TEST
     test_config = config.test_config
 
     test_env = DummyVecEnv([
@@ -67,7 +73,12 @@ def test_model(config):
             action, _ = model.predict(obs, deterministic=True)
             obs, reward, done, info = test_env.step(action)
             if test_config.render_mode is not None:
-                test_env.render()
+                if test_config.render_mode == "human":
+                    test_env.render()
+                else:
+                    frame = test_env.render()
+                    cv2.imshow("RGB Array View", cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+                    cv2.waitKey(1)
             episode_reward += reward[0]
             step += 1
         logging.info(f"✅ Episode {episode + 1} | 步数: {step} | 总奖励: {episode_reward:.2f}")
