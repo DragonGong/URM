@@ -12,6 +12,7 @@ from urm.reward.trajectory.behavior.behavioral_combination import BehavioralComb
 from urm.reward.trajectory.behavior.behaviors import Behavior
 from urm.reward.trajectory.highway_env_state import HighwayState
 from urm.reward.trajectory.prediction.model import Model
+from urm.reward.trajectory.prediction_service import PredictionService
 from urm.reward.trajectory.traj import TrajNode, TrajEdge
 from urm.reward.trajectory.traj_tree import TrajTree
 from urm.reward.trajectory.fitting import *
@@ -20,18 +21,16 @@ from urm.reward.trajectory.fitting import *
 class TrajectoryGenerator:
     def __init__(self, ego_state: EgoState, surrounding_states: SurroundingState, env_condition: State,
                  behaviors: Dict[str, List['BehavioralCombination']],
-                 prediction_model: Model, config: Config):
+                 prediction: PredictionService, fitting_algorithm: Fitting, config: Config):
         self.env_condition = env_condition.env_condition
         self.config: Optional[Config] = config
         self.surrounding_states = surrounding_states
         self.ego_state = ego_state
         self.behaviors = behaviors
-        self.fitting_algorithm: Fitting = create_fitting_from_config(self.config)
-        self.prediction_model = prediction_model
-        self.prediction_result: [[Region2D]] = []
-        start_time = time.time()
-        self.predict_collision_region()
-        logging.debug(f"predict_collision_region time is {time.time() - start_time}")
+        self.fitting_algorithm: Fitting = fitting_algorithm
+        # self.prediction_model = prediction_model
+        # self.prediction_result: [[Region2D]] = []
+        self.prediction = prediction
 
     def fitting_edge(self, edge: TrajEdge):
         self.fitting_algorithm.fit_edge_by_node(edge)
@@ -46,31 +45,6 @@ class TrajectoryGenerator:
                 i].velocity.magnitude / self.config.reward.velocity_unit, self.config.reward.discount_factor_min)
             edge.discrete_points[i].set_risk_value(t=edge.discrete_points[i].get_time(), risk=risk,
                                                    speed=edge.discrete_points[i].velocity.magnitude)
-
-    def predict_collision_region(self):
-        """
-        Generate the temporal and spatial regions of conflicts among surrounding vehicles
-        :return:
-        """
-        step_num = self.config.reward.step_num
-        duration = self.config.reward.duration
-
-        surrounding_cars = self.surrounding_states.get_cars_in_radius(self.ego_state.x, self.ego_state.y,
-                                                                      self.config.reward.surrounding_radius)
-        for s in range(step_num):
-            assert int(
-                duration / self.fitting_algorithm.interval_duration) > 0, ("duration and interval_duration assignment "
-                                                                           "error")
-            for interval in range(int(duration / self.fitting_algorithm.interval_duration)):
-                t = s + interval * self.fitting_algorithm.interval_duration
-                result = []
-                for car in surrounding_cars:
-                    # s = time.time()
-                    region = self.prediction_model.predict_region(car, t * duration, width=car.vehicle_size.width,
-                                                                  length=car.vehicle_size.length)
-                    # logging.debug(f"each car prediction time for 1 s is {time.time()-s}")
-                    result.append(region)
-                self.prediction_result.append(result)
 
     def generate_right(self, step_nums=3, duration=1):
         root_node = TrajNode.from_car_state(self.ego_state)
@@ -285,9 +259,14 @@ class TrajectoryGenerator:
     def judge_surrounding_collision(self, node: TrajNode):
         # 这个函数需要在多个环节调用，为了效率只预测一遍
         # 与时间有关，所以是 节点 为输入（节点输入包含时间）
-        assert self.prediction_result is not None, "prediction result is None!"
-        regions: [Region2D] = self.prediction_result[int(node.get_time())]
+        assert self.prediction.result is not None, "prediction result is None!"
+        try:
+            regions: [Region2D] = self.prediction.result[int(node.get_time())]
+        except Exception as e:
+            logging.error(e)
+            return False
         for region in regions:
             if region.contains((node.x, node.y)):
+                logging.debug(f"node collision with rect")
                 return True
         return False

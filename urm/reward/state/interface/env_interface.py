@@ -64,3 +64,6 @@ class EnvInterface(Protocol):
 
     def get_env(self):
         ...
+
+    def get_config(self):
+        raise NotImplemented
