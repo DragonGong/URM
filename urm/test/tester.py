@@ -77,7 +77,7 @@ def test_model(config):
                     test_env.render()
                 else:
                     frame = test_env.render()
-                    cv2.imshow("RGB Array View", cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+                    cv2.imshow("riskmap frame", cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
                     cv2.waitKey(1)
             episode_reward += reward[0]
             step += 1
