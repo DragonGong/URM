@@ -26,12 +26,12 @@ class TrajectoryGenerator:
         self.surrounding_states = surrounding_states
         self.ego_state = ego_state
         self.behaviors = behaviors
+        self.fitting_algorithm: Fitting = create_fitting_from_config(self.config)
         self.prediction_model = prediction_model
         self.prediction_result: [[Region2D]] = []
         start_time = time.time()
         self.predict_collision_region()
-        logging.debug(f"predict_collision_region time is {time.time()-start_time}")
-        self.fitting_algorithm: Fitting = create_fitting_from_config(self.config)
+        logging.debug(f"predict_collision_region time is {time.time() - start_time}")
 
     def fitting_edge(self, edge: TrajEdge):
         self.fitting_algorithm.fit_edge_by_node(edge)
@@ -55,16 +55,22 @@ class TrajectoryGenerator:
         step_num = self.config.reward.step_num
         duration = self.config.reward.duration
 
-        surrounding_cars = self.surrounding_states.get_cars_in_radius(self.ego_state.x,self.ego_state.y,self.config.reward.surrounding_radius)
-        for t in range(step_num):
-            result = []
-            for car in surrounding_cars:
-                # s = time.time()
-                region = self.prediction_model.predict_region(car, (t + 1) * duration, width=car.vehicle_size.width,
-                                                              length=car.vehicle_size.length)
-                # logging.debug(f"each car prediction time for 1 s is {time.time()-s}")
-                result.append(region)
-            self.prediction_result.append(result)
+        surrounding_cars = self.surrounding_states.get_cars_in_radius(self.ego_state.x, self.ego_state.y,
+                                                                      self.config.reward.surrounding_radius)
+        for s in range(step_num):
+            assert int(
+                duration / self.fitting_algorithm.interval_duration) > 0, ("duration and interval_duration assignment "
+                                                                           "error")
+            for interval in range(int(duration / self.fitting_algorithm.interval_duration)):
+                t = s + interval * self.fitting_algorithm.interval_duration
+                result = []
+                for car in surrounding_cars:
+                    # s = time.time()
+                    region = self.prediction_model.predict_region(car, t * duration, width=car.vehicle_size.width,
+                                                                  length=car.vehicle_size.length)
+                    # logging.debug(f"each car prediction time for 1 s is {time.time()-s}")
+                    result.append(region)
+                self.prediction_result.append(result)
 
     def generate_right(self, step_nums=3, duration=1):
         root_node = TrajNode.from_car_state(self.ego_state)
@@ -73,11 +79,11 @@ class TrajectoryGenerator:
         start_time = time.time()
         traj_tree = self.traj_tree_generated_by_behavior_collection(root_node=root_node, ego_state=self.ego_state,
                                                                     behaviors=self.behaviors, duration=duration)
-        logging.debug(f"traj_tree_generated_by_behavior_collection duration is {time.time()-start_time}")
+        logging.debug(f"traj_tree_generated_by_behavior_collection duration is {time.time() - start_time}")
         start_time = time.time()
         # traj_tree.visualize_plot_nb(show_direction=False,block=True)
         traj_tree = self.traj_tree_cut(traj_tree)
-        logging.debug(f"traj_tree_cut duration is {time.time()-start_time}")
+        logging.debug(f"traj_tree_cut duration is {time.time() - start_time}")
         # traj_tree.visualize_plot_nb(show_direction=False,block=True)
         return traj_tree
 
@@ -280,7 +286,7 @@ class TrajectoryGenerator:
         # 这个函数需要在多个环节调用，为了效率只预测一遍
         # 与时间有关，所以是 节点 为输入（节点输入包含时间）
         assert self.prediction_result is not None, "prediction result is None!"
-        regions: [Region2D] = self.prediction_result[int(node.get_time()) - 1]
+        regions: [Region2D] = self.prediction_result[int(node.get_time())]
         for region in regions:
             if region.contains((node.x, node.y)):
                 return True

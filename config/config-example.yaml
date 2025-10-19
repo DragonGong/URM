@@ -101,6 +101,7 @@ reward:
   fitting_model: "polynomial"
   fitting_model_config:
     polynomial: { }
+#    interval_duration: 0.1
 
   riskmap_config:
     cell_size: 3
