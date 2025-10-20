@@ -55,12 +55,7 @@ def make_env(config, render_mode=None, seed=None):
 def train_models_with_seeds(config: Config):
     assert config.training.seed_list is not None and len(config.training.seed_list) != 0, "seed list is none"
 
-    setup_shared_logging(
-        log_dir='log',
-        log_name_prefix='app',
-        console_level=logging.INFO,
-        file_level=logging.DEBUG
-    )
+
     ctx = mp.get_context('spawn')
     seed_with_index = [(seed, idx) for idx, seed in enumerate(config.training.seed_list)]
     with ctx.Pool(processes=min(len(config.training.seed_list), mp.cpu_count())) as pool:
@@ -73,6 +68,12 @@ def _train_model_wrapper(seed, config, index=0):
     """
     子进程入口：调用 train_model
     """
+    setup_shared_logging(
+        log_dir='log',
+        log_name_prefix='app',
+        console_level=logging.INFO,
+        file_level=logging.DEBUG
+    )
     logging.info(f"子进程 seed :{seed} 开启")
     try:
         return train_model(config, seed=seed, index=index)
