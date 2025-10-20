@@ -5,6 +5,7 @@ class Config:
     class EnvConfig:
         def __init__(self, **kwargs):
             # 必需字段
+            self.default_config = kwargs.get("default_config",False)
             self.env_id = kwargs.get("env_id", "highway-fast-v0")
             self.lanes_count = kwargs.get("lanes_count", 4)
             self.vehicles_count = kwargs.get("vehicles_count", 50)

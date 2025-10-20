@@ -22,15 +22,14 @@ ALGORITHM_MAP = {
 def make_env(config, render_mode=None):
     env_config = config.env_config
     env = gym.make(env_config.env_id, render_mode=render_mode)
-
-    idm_config = getattr(env_config, 'IDMVehicle', {})
-    if idm_config:
-        setattr(env_config, 'highway_env.vehicle.behavior.IDMVehicle', idm_config)
-
-    env.unwrapped.configure(env_config.__dict__)
+    if not config.env_config.default_config:
+        idm_config = getattr(env_config, 'IDMVehicle', {})
+        if idm_config:
+            setattr(env_config, 'highway_env.vehicle.behavior.IDMVehicle', idm_config)
+        env.unwrapped.configure(env_config.__dict__)
     env.reset()
-
     env = make_wrapped_env(env, config)
+    logging.info(env.unwrapped.config)
     return env
 
 

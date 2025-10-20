@@ -38,12 +38,11 @@ def make_env(config, render_mode=None, seed=None):
     """根据 Config 对象创建环境"""
     env_config = config.env_config
     env = gym.make(env_config.env_id, render_mode=render_mode)
-
-    idm_config = getattr(env_config, 'IDMVehicle', {})
-    if idm_config:
-        setattr(env_config, 'highway_env.vehicle.behavior.IDMVehicle', idm_config)
-
-    env.unwrapped.configure(env_config.__dict__)  # 传入字典配置
+    if not config.env_config.default_config:
+        idm_config = getattr(env_config, 'IDMVehicle', {})
+        if idm_config:
+            setattr(env_config, 'highway_env.vehicle.behavior.IDMVehicle', idm_config)
+        env.unwrapped.configure(env_config.__dict__)  # 传入字典配置
     if seed is not None:
         env.reset(seed=seed)
     else:
