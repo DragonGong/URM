@@ -38,12 +38,11 @@ def make_env(config, render_mode=None, seed=None):
     """根据 Config 对象创建环境"""
     env_config = config.env_config
     env = gym.make(env_config.env_id, render_mode=render_mode)
-
-    idm_config = getattr(env_config, 'IDMVehicle', {})
-    if idm_config:
-        setattr(env_config, 'highway_env.vehicle.behavior.IDMVehicle', idm_config)
-
-    env.unwrapped.configure(env_config.__dict__)  # 传入字典配置
+    if not config.env_config.default_config:
+        idm_config = getattr(env_config, 'IDMVehicle', {})
+        if idm_config:
+            setattr(env_config, 'highway_env.vehicle.behavior.IDMVehicle', idm_config)
+        env.unwrapped.configure(env_config.__dict__)  # 传入字典配置
     if seed is not None:
         env.reset(seed=seed)
     else:
@@ -56,21 +55,10 @@ def make_env(config, render_mode=None, seed=None):
 def train_models_with_seeds(config: Config):
     assert config.training.seed_list is not None and len(config.training.seed_list) != 0, "seed list is none"
 
-    # # 主进程
-    # N = len(config.training.seed_list) + 1
-    # print("\n" * N, end="", file=sys.stderr, flush=True)
-    setup_shared_logging(
-        log_dir='log',
-        log_name_prefix='app',
-        console_level=logging.INFO,
-        file_level=logging.DEBUG
-    )
 
     ctx = mp.get_context('spawn')
-    # train_func = partial(_train_model_wrapper, config=config)
     seed_with_index = [(seed, idx) for idx, seed in enumerate(config.training.seed_list)]
     with ctx.Pool(processes=min(len(config.training.seed_list), mp.cpu_count())) as pool:
-        # results = pool.map(train_func, config.training.seed_list)
         results = pool.starmap(_train_model_wrapper, [(seed,config, idx) for seed, idx in seed_with_index])
     logging.info("所有 seeds 训练完成。")
     return results
@@ -80,6 +68,13 @@ def _train_model_wrapper(seed, config, index=0):
     """
     子进程入口：调用 train_model
     """
+    setup_shared_logging(
+        log_dir='log',
+        log_name_prefix='app',
+        console_level=logging.INFO,
+        file_level=logging.DEBUG
+    )
+    logging.info(f"子进程 seed :{seed} 开启")
     try:
         return train_model(config, seed=seed, index=index)
     except Exception as e:
@@ -158,7 +153,7 @@ def train_model(config: Config, seed=None, index=0):
     remark_name = timestamp + "_" + task_name + "_" + algo_name
     if seed is not None:
         remark_name += "_seed_" + str(seed)
-
+    logging.debug("配置生效")
     set_remark_seed_for_logging(remark=remark_name, seed=seed)
     for param in common_params:
         if hasattr(config.model_config, param) and getattr(config.model_config, param) is not None:

@@ -83,6 +83,7 @@ class RiskMapEnv(Env):
         if self.config.test_config.render_mode != "rgb_array":
             return base_render
         image = base_render.copy()
+        original_image = base_render.copy()
         env = self.env.unwrapped
         vehicle = env.vehicle
 
@@ -145,8 +146,9 @@ class RiskMapEnv(Env):
                     orientation=theta,
                     color_bgr=color_bgr
                 )
-
-        return image
+        # combined = np.hstack((original_image, image))
+        combined = np.vstack((image, original_image))
+        return combined
 
 
 def _draw_oriented_square(image, px, py, cell_size, ppm, orientation, color_bgr):

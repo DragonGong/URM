@@ -10,6 +10,7 @@ from urm.reward.state.interface.env_interface import EnvInterface
 import highway_env
 import logging
 
+
 class Env(gym.Wrapper):
     def __init__(self, env, config: Config, **kwargs):
         super().__init__(env)
@@ -406,3 +407,7 @@ class Env(gym.Wrapper):
 
     def get_env(self):
         return self.env
+
+    def get_config(self):
+        assert hasattr(self.env.unwrapped, "config"), "env unwrapped doesn't have the config attr"
+        return self.env.unwrapped.config

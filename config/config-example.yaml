@@ -1,10 +1,12 @@
-# 适用于train_pro.py  train_multi.py
+# 适用于train_pro.py  train_multi.py test_pro.py
 env_config:
-#  env_id: "highway-fast-v0"
+  env_id: "highway-fast-v0"
 #  env_id: "merge-v0"
 #  env_id: "roundabout-v0"
 #  env_id: "intersection-v1"
 #  env_id: "highway-v0"
+
+  default_config: false # 是否使用默认配置
   lanes_count: 4
   vehicles_count: 50
   duration: 400
@@ -101,6 +103,7 @@ reward:
   fitting_model: "polynomial"
   fitting_model_config:
     polynomial: { }
+#    interval_duration: 0.1
 
   riskmap_config:
     cell_size: 3

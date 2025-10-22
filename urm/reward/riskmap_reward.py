@@ -9,10 +9,13 @@ from urm.reward.reward_meta import RewardMeta
 from urm.reward.riskmap.risk_map import RiskMap
 from urm.reward.riskmap.riskmap_manager import RiskMapManager
 from urm.reward.state.ego_state import EgoState
+from urm.reward.state.idm_state import IDMState
 from urm.reward.state.interface import EnvInterface
 from urm.reward.state.state import State
 from urm.reward.state.surrounding_state import SurroundingState
 from urm.reward.trajectory.behavior import BehaviorFactory, BehaviorName
+from urm.reward.trajectory.fitting import create_fitting_from_config
+from urm.reward.trajectory.prediction_service import PredictionService
 from urm.reward.trajectory.traj import TrajNode
 from urm.reward.trajectory.traj_tree import TrajTree
 from urm.reward.trajectory.trajectory_generator import TrajectoryGenerator
@@ -38,7 +41,9 @@ class RiskMapReward(RewardMeta):
         self.config = config
         self.riskmap_manager: Optional[RiskMapManager] = None
         self.behavior_factory = BehaviorFactory(config.reward.behavior_configs)
-        self.prediction_model = create_model_from_config(self.config)
+        self.fitting_algorithm = create_fitting_from_config(self.config)
+        self.prediction_service = PredictionService(self.config, interval=self.fitting_algorithm.interval_duration,
+                                                    total_time=self.config.reward.duration * self.config.reward.step_num)
         self.behaviors = self.behavior_factory.get_all_scenarios_as_combinations()
         if self.config.reward.visualize:
             self.visualizer = RiskMapVisualizer(title="Training RiskMap", plt_show=config.reward.plt_show)
@@ -50,13 +55,11 @@ class RiskMapReward(RewardMeta):
         logging.debug("_____________________________________")
         logging.debug(f"baseline reward is {baseline_reward}")
         risk = 0
-        riskmap = None
         start_time = time.time()
         if self.riskmap_manager is None:
             urm_reward = baseline_reward
         else:
             riskmap_total: RiskMap = self.riskmap_manager.sum_all()
-            riskmap = riskmap_total
             if self.visualizer is not None:
                 vis_data = riskmap_total.get_visualization_data()
                 self.visualizer.update(vis_data)
@@ -91,7 +94,7 @@ class RiskMapReward(RewardMeta):
         print_time_tuple(time_tuple=time_tuple + (duration_time,))
         logging.debug(f"urm_reward is {urm_reward}")
         logging.debug("_____________________________________\n")
-        return urm_reward,risk,riskmap
+        return urm_reward, risk, self.riskmap_manager.sum_all()
 
     def urm_reward(self, custom_reward, baseline):
         reward = self.config.reward.baseline_reward_w * baseline + self.config.reward.custom_reward_w \
@@ -118,13 +121,21 @@ class RiskMapReward(RewardMeta):
     def riskmap_manager_create(self, ego_state: EgoState, surrounding_states: SurroundingState,
                                env_condition: EnvInterface):
         start_time = time.time()
-
+        assert env_condition.get_config()["policy_frequency"]
+        step_frequency = env_condition.get_config()["policy_frequency"]
+        self.prediction_service.set_step_frequency(step_frequency)
+        self.prediction_service.update_result(radius=self.config.reward.surrounding_radius,
+                                              x=ego_state.x, y=ego_state.y, surround_states=surrounding_states)
+        logging.debug(f"prediction time is {time.time() - start_time}")
+        prediction_time = time.time() - start_time
+        start_time = time.time()
         global_state = State(env=env_condition)
         logging.debug(f"global state creation time is {time.time() - start_time}")
         start_time = time.time()
         generator = TrajectoryGenerator(ego_state, surrounding_states, env_condition=global_state,
                                         behaviors=self.behaviors,
-                                        prediction_model=self.prediction_model, config=self.config)
+                                        prediction=self.prediction_service, fitting_algorithm=self.fitting_algorithm,
+                                        config=self.config)
         logging.debug(f"TrajectoryGenerator time is {time.time() - start_time}")
         start_time = time.time()
         traj = generator.generate_right(
@@ -144,7 +155,7 @@ class RiskMapReward(RewardMeta):
 
         assign_risk_time = time.time() - start_time
 
-        return (traj_time, backpropagation_time, assign_risk_time)
+        return (traj_time, backpropagation_time, assign_risk_time, prediction_time)
 
     def get_tree_nodes_by_action(self, action, trajtree: TrajTree, action_dict):
         action_str = action_dict[int(action)]
@@ -269,11 +280,9 @@ def map_action_str_to_behavior(action_str: str) -> List[Tuple[BehaviorName, Beha
 
 
 def print_time_tuple(time_tuple):
-    if len(time_tuple) != 4:
-        logging.error("错误：输入元组必须包含4个元素（traj_time, backpropagation_time, assign_risk_time,reward_time）")
-        return
-    traj_time, backpropagation_time, assign_risk_time, reward_time = time_tuple
-    logging.debug(f"时间统计信息：")
+    traj_time, backpropagation_time, assign_risk_time,prediction_time, reward_time = time_tuple
+    logging.debug(f"时间统计信息：总时间：{sum(time_tuple)} s")
+    logging.debug(f"  - 预测周围车辆轨迹时间: {prediction_time} s")
     logging.debug(f"  - 轨迹生成时间: {traj_time} s")
     logging.debug(f"  - 反向传播时间: {backpropagation_time} s")
     logging.debug(f"  - 风险分配时间: {assign_risk_time} s")
