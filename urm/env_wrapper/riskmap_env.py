@@ -20,6 +20,7 @@ class RiskMapEnv(Env):
         self.reward = reward
         self.last_acceleration = 0.0
         self.risk_map = None
+        self.risk = 0
 
     def step(self, action):
         original_start = time.time()
@@ -71,7 +72,9 @@ class RiskMapEnv(Env):
             "is_success": is_success,
             "on_road": env.vehicle.on_road,
             "risk": risk,
+            "action": self.get_action_dict()[action]
         })
+        self.risk = risk
         logging.debug(f"the step last for {time.time() - original_start}s")
         return obs, reward, terminated, truncated, info
 
@@ -146,6 +149,14 @@ class RiskMapEnv(Env):
                     orientation=theta,
                     color_bgr=color_bgr
                 )
+
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.6
+        color = (255, 0,0 )
+        thickness = 2
+        text = f"Risk: {self.risk:.3f}"
+
+        cv2.putText(image, text, (10, 30), font, font_scale, color, thickness, cv2.LINE_AA)
         # combined = np.hstack((original_image, image))
         combined = np.vstack((image, original_image))
         return combined

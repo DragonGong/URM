@@ -62,11 +62,16 @@ def test_model(config):
 
     logging.info("▶️ 开始测试...")
     total_reward = 0
-
+    total_speed = 0
+    total_risk = 0
+    total_crashed = 0
     for episode in range(test_config.test_episodes):
         obs = test_env.reset()
         done = False
         episode_reward = 0
+        episode_risk = 0
+        episode_crashed = False
+        episode_speed = []
         step = 0
         while not done:
             action, _ = model.predict(obs, deterministic=True)
@@ -79,12 +84,26 @@ def test_model(config):
                     cv2.imshow("riskmap frame", cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
                     cv2.waitKey(1)
             episode_reward += reward[0]
+            episode_risk += info[0]["risk"]
+            if done and info[0]["crashed"]:
+                episode_crashed = True
+            episode_speed.append(info[0]["speed"])
+            logging.info(f"action is {info[0]['action']}")
             step += 1
-        logging.info(f"✅ Episode {episode + 1} | 步数: {step} | 总奖励: {episode_reward:.2f}")
+        logging.info(f"✅ Episode {episode + 1} | 步数: {step} | 总奖励: {episode_reward:.2f} | ")
         total_reward += episode_reward
+        total_risk += episode_risk
+        total_speed += sum(episode_speed)/len(episode_speed)
+        if episode_crashed:
+            total_crashed += 1
 
     avg_reward = total_reward / test_config.test_episodes
+    avg_crashed = total_crashed / test_config.test_episodes
+    avg_risk = total_risk / test_config.test_episodes
+    avg_speed = total_speed / test_config.test_episodes
     logging.info(f"📈 平均奖励: {avg_reward:.2f}")
-
+    logging.info(f"📈 碰撞率: {avg_crashed:.2f}")
+    logging.info(f"📈 平均risk: {avg_risk:.2f}")
+    logging.info(f"📈 平均速度: {avg_speed:.2f}")
     test_env.close()
     return avg_reward
