@@ -1,4 +1,4 @@
-# 适用于train_pro.py  train_multi.py
+# 适用于train_pro.py  train_multi.py test_pro.py
 env_config:
   env_id: "highway-fast-v0"
 #  env_id: "merge-v0"
