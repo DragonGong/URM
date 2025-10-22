@@ -25,7 +25,17 @@ class RiskMapEnv(Env):
     def step(self, action):
         original_start = time.time()
         start = time.time()
+        initial_lane_index  = None
+        target_lane_index = None
+        if hasattr(self.unwrapped, "controlled_vehicles"):
+            c_v = self.unwrapped.controlled_vehicles[0]
+            initial_lane_index = c_v.lane_index
+
         obs, base_line_reward, terminated, truncated, info = self.env.step(action)
+        if hasattr(self.unwrapped, "controlled_vehicles"):
+            c_v = self.unwrapped.controlled_vehicles[0]
+            target_lane_index = c_v.target_lane_index
+
         logging.debug("\n\n\n")
         logging.debug(f"the baseline step time consuming is {time.time() - start}s")
         start = time.time()
@@ -47,6 +57,8 @@ class RiskMapEnv(Env):
                 self.config.reward.baseline_reward_w == 1 and self.config.reward.risk_reward_w == 0)):
             reward = base_line_reward
         else:
+            if initial_lane_index == target_lane_index:
+                action = np.int64(1)
             reward, risk, self.risk_map = self.reward.reward(ego_state, surrounding_state, self, base_line_reward,
                                                              action)
             logging.debug(f"the reward calculation time is {time.time() - start}s")
