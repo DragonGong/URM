@@ -56,10 +56,12 @@ class RiskMapReward(RewardMeta):
         logging.debug(f"baseline reward is {baseline_reward}")
         risk = 0
         start_time = time.time()
+        riskmap_last = None
         if self.riskmap_manager is None:
             urm_reward = baseline_reward
         else:
             riskmap_total: RiskMap = self.riskmap_manager.sum_all()
+            riskmap_last = riskmap_total
             if self.visualizer is not None:
                 vis_data = riskmap_total.get_visualization_data()
                 self.visualizer.update(vis_data)
@@ -80,7 +82,7 @@ class RiskMapReward(RewardMeta):
                     traj_nodes=traj_nodes,
                     risk_map=riskmap_total)
                 # riskmap_mask.plot_pro(block=True)
-                # logging.debug(f"cell count is {cell_count}")
+                # logging.info(f"cell count is {cell_count}")
                 custom = risk_all / cell_count
             if self.config.reward.version == 0:
                 urm_reward = self.urm_reward(baseline=baseline_reward, custom_reward=custom)
@@ -94,7 +96,7 @@ class RiskMapReward(RewardMeta):
         print_time_tuple(time_tuple=time_tuple + (duration_time,))
         logging.debug(f"urm_reward is {urm_reward}")
         logging.debug("_____________________________________\n")
-        return urm_reward, risk, self.riskmap_manager.sum_all()
+        return urm_reward, risk, self.riskmap_manager.sum_all(),riskmap_last
 
     def urm_reward(self, custom_reward, baseline):
         reward = self.config.reward.baseline_reward_w * baseline + self.config.reward.custom_reward_w \

@@ -5,7 +5,7 @@ import logging
 from urm.config import Config
 from urm.reward.state.car_state import CarState
 from urm.reward.state.ego_state import EgoState
-from urm.reward.state.region2d import Region2D
+from urm.reward.state.region2d import Region2D, RectRegion
 from urm.reward.state.state import State
 from urm.reward.state.surrounding_state import SurroundingState
 from urm.reward.trajectory.behavior.behavioral_combination import BehavioralCombination
@@ -266,7 +266,10 @@ class TrajectoryGenerator:
             logging.error(e)
             return False
         for region in regions:
-            if region.contains((node.x, node.y)):
+            # todo:目前矩阵比较粗略
+            car_region = RectRegion.from_center_and_size(node.x, node.y, node.car_state.vehicle_size.length,
+                                                         node.car_state.vehicle_size.length)
+            if car_region.intersects(region):
                 logging.debug(f"node collision with rect")
                 return True
         return False
