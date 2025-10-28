@@ -185,7 +185,7 @@ class SoftDeceleration(LongitudinalBehavior):
         )
 
     def target_velocity(self, root_velocity: float, state: State) -> float:
-        return max(root_velocity - 3.0, 0.01)
+        return max(root_velocity - 2.5, 0.01)
 
 
 @BehaviorFactory.register(BehaviorName.HARD_DECEL.value)
@@ -229,4 +229,4 @@ class HardDeceleration(LongitudinalBehavior):
         )
 
     def target_velocity(self, root_velocity: float, state: State) -> float:
-        return max(root_velocity - 10.0, 0.01)
+        return max(root_velocity - 5, 0.01)

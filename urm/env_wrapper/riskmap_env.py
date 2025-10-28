@@ -20,12 +20,23 @@ class RiskMapEnv(Env):
         self.reward = reward
         self.last_acceleration = 0.0
         self.risk_map = None
+        self.risk_map_new = None
         self.risk = 0
 
     def step(self, action):
         original_start = time.time()
         start = time.time()
+        initial_lane_index = None
+        target_lane_index = None
+        if hasattr(self.unwrapped, "controlled_vehicles"):
+            c_v = self.unwrapped.controlled_vehicles[0]
+            initial_lane_index = c_v.lane_index
+
         obs, base_line_reward, terminated, truncated, info = self.env.step(action)
+        if hasattr(self.unwrapped, "controlled_vehicles"):
+            c_v = self.unwrapped.controlled_vehicles[0]
+            target_lane_index = c_v.target_lane_index
+
         logging.debug("\n\n\n")
         logging.debug(f"the baseline step time consuming is {time.time() - start}s")
         start = time.time()
@@ -47,8 +58,11 @@ class RiskMapEnv(Env):
                 self.config.reward.baseline_reward_w == 1 and self.config.reward.risk_reward_w == 0)):
             reward = base_line_reward
         else:
-            reward, risk, self.risk_map = self.reward.reward(ego_state, surrounding_state, self, base_line_reward,
-                                                             action)
+            if initial_lane_index == target_lane_index:
+                action = np.int64(1)
+            reward, risk, self.risk_map_new, self.risk_map = self.reward.reward(ego_state, surrounding_state, self,
+                                                                                base_line_reward,
+                                                                                action)
             logging.debug(f"the reward calculation time is {time.time() - start}s")
 
         current_speed = env.vehicle.speed
@@ -60,7 +74,7 @@ class RiskMapEnv(Env):
             logging.debug("is_success is not in info")
             is_success = (
                     not info.get("crashed", False) and
-                    terminated  # 只有正常结束才算成功（非 crash 导致的 terminated）
+                    truncated # 只有正常结束才算成功（非 crash 导致的 terminated）
             )
         else:
             is_success = info.get("is_success", False)
@@ -152,7 +166,7 @@ class RiskMapEnv(Env):
 
         font = cv2.FONT_HERSHEY_SIMPLEX
         font_scale = 0.6
-        color = (255, 0,0 )
+        color = (255, 0, 0)
         thickness = 2
         text = f"Risk: {self.risk:.3f}"
 
