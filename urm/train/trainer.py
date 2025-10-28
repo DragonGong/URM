@@ -42,7 +42,9 @@ def make_env(config, render_mode=None, seed=None):
         idm_config = getattr(env_config, 'IDMVehicle', {})
         if idm_config:
             setattr(env_config, 'highway_env.vehicle.behavior.IDMVehicle', idm_config)
-        env.unwrapped.configure(env_config.__dict__)  # 传入字典配置
+            env.unwrapped.configure(env_config.__dict__)  # 传入字典配置
+    else:
+        env.unwrapped.configure({"offscreen_rendering"},env_config.offscreen_rendering)
     if seed is not None:
         env.reset(seed=seed)
     else:

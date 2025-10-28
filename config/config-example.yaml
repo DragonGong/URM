@@ -32,7 +32,7 @@ env_config:
   scaling: 5.5
   show_trajectories: false
   render_agent: true
-  offscreen_rendering: false
+  offscreen_rendering: false # 即使设置了默认配置，这个配置也会单独生效
 
 model_config:
   algorithm: "DQN"

@@ -27,6 +27,8 @@ def make_env(config, render_mode=None):
         if idm_config:
             setattr(env_config, 'highway_env.vehicle.behavior.IDMVehicle', idm_config)
         env.unwrapped.configure(env_config.__dict__)
+    else:
+        env.unwrapped.configure({"offscreen_rendering":env_config.offscreen_rendering})
     env.reset()
     env = make_wrapped_env(env, config)
     logging.info(env.unwrapped.config)
@@ -92,7 +94,7 @@ def test_model(config):
             if done and info[0]["is_success"]:
                 episode_success = True
             episode_speed.append(info[0]["speed"])
-            logging.info(f"action is {info[0]['action']}")
+            # logging.info(f"action is {info[0]['action']}")
             step += 1
         logging.info(f"✅ Episode {episode + 1} | 步数: {step} | 总奖励: {episode_reward:.2f} | is_crashed: {episode_crashed} | is_success: {episode_success}")
         total_reward += episode_reward
